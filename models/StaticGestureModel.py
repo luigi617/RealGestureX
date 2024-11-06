@@ -13,7 +13,7 @@ class StaticGestureModel(nn.Module):
             nn.Dropout(0.3),
             nn.Linear(128, num_classes)
         )
-    
+     
     def forward(self, x):
         out = self.fc(x)
         return out

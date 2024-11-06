@@ -1,5 +1,4 @@
 # scripts/train_static.py
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -20,7 +19,8 @@ class StaticGestureDataset(Dataset):
         """
         self.data = []
         self.labels = []
-        self.classes = sorted(os.listdir(data_dir))
+        self.transform = transform
+        self.classes = ["pointing", "open_palm", "thumb_index_touch", "thumb_middle_touch", "fist"]
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
         
         for cls in self.classes:
@@ -50,9 +50,8 @@ class StaticGestureDataset(Dataset):
 
 def train_static_gesture_model():
     # Paths
-    train_dir = 'gesture_dataset/static/train'
-    val_dir = 'gesture_dataset/static/val'
-    
+    train_dir = os.getcwd() + '/gesture_dataset/static/train'
+    val_dir = os.getcwd() + '/gesture_dataset/static/val'
     # Hyperparameters
     num_epochs = 50
     batch_size = 32
@@ -62,7 +61,6 @@ def train_static_gesture_model():
     # Datasets and Dataloaders
     train_dataset = StaticGestureDataset(train_dir)
     val_dataset = StaticGestureDataset(val_dir)
-    
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     
