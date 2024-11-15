@@ -56,8 +56,8 @@ def train_static_gesture_model():
     val_dir = os.getcwd() + '/gesture_dataset/static/val'
     # Hyperparameters
     num_epochs = 50
-    batch_size = 32
-    learning_rate = 1e-4
+    batch_size = 64
+    learning_rate = 1e-3
     num_classes = len(static)
     
     # Datasets and Dataloaders
