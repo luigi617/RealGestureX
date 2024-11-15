@@ -11,11 +11,11 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_c
 
 
 gestures = ["swipe_up", "swipe_down", "swipe_left", "swipe_right", 
-            "pointing", "open_palm", "thumb_index_touch", "thumb_middle_touch", "fist"]
+            "pointing", "open_palm", "thumb_index_touch", "fist"]
 
 dynamic = ["swipe_up", "swipe_down", "swipe_left", "swipe_right"]
-static = ["pointing", "open_palm", "thumb_index_touch", "thumb_middle_touch", "fist", "other"]
-dataset_path = "gesture_dataset/static/val"
+static = ["pointing", "open_palm", "thumb_index_touch", "fist"]
+dataset_path = "gesture_dataset/static/test"
 
 for gesture in gestures:
     os.makedirs(os.path.join(dataset_path, gesture), exist_ok=True)

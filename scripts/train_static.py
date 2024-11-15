@@ -10,6 +10,8 @@ import json
 import numpy as np
 from tqdm import tqdm
 
+static = ["pointing", "open_palm", "thumb_index_touch", "fist"]
+
 class StaticGestureDataset(Dataset):
     def __init__(self, data_dir, transform=None):
         """
@@ -20,7 +22,7 @@ class StaticGestureDataset(Dataset):
         self.data = []
         self.labels = []
         self.transform = transform
-        self.classes = ["pointing", "open_palm", "thumb_index_touch", "thumb_middle_touch", "fist"]
+        self.classes = static
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
         
         for cls in self.classes:
@@ -56,7 +58,7 @@ def train_static_gesture_model():
     num_epochs = 50
     batch_size = 32
     learning_rate = 1e-4
-    num_classes = 5
+    num_classes = len(static)
     
     # Datasets and Dataloaders
     train_dataset = StaticGestureDataset(train_dir)
