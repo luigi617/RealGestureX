@@ -11,6 +11,9 @@ import numpy as np
 from utils.gesture_commands import map_gesture_to_command
 import time
 
+
+static = ["pointing", "open_palm", "thumb_index_touch", "fist"]
+
 def execute_command(command):
     """
     Executes a specific command based on the recognized gesture.
@@ -53,16 +56,16 @@ def recognize_gestures():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load Static Gesture Model
-    static_model = StaticGestureModel(input_size=63, num_classes=5)
+    static_model = StaticGestureModel(input_size=63, num_classes=len(static))
     static_model.load_state_dict(torch.load('models/static_gesture_model.pth', map_location=device))
     static_model.to(device)
     static_model.eval()
 
     # Load Dynamic Gesture Model
-    dynamic_model = DynamicGestureModel(num_classes=4, hidden_size=128, num_layers=2)
-    dynamic_model.load_state_dict(torch.load('models/dynamic_gesture_model.pth', map_location=device))
-    dynamic_model.to(device)
-    dynamic_model.eval()
+    # dynamic_model = DynamicGestureModel(num_classes=4, hidden_size=128, num_layers=2)
+    # dynamic_model.load_state_dict(torch.load('models/dynamic_gesture_model.pth', map_location=device))
+    # dynamic_model.to(device)
+    # dynamic_model.eval()
 
     # Initialize MediaPipe Hands
     mp_hands = mp.solutions.hands
@@ -75,7 +78,7 @@ def recognize_gestures():
     mp_drawing = mp.solutions.drawing_utils
 
     # Gesture labels
-    static_gestures = ['pointing', 'open_palm', 'thumb_index_touch', 'thumb_middle_touch', 'fist']
+    static_gestures = ['pointing', 'open_palm', 'thumb_index_touch', 'fist']
     dynamic_gestures = ['swipe_up', 'swipe_down', 'swipe_left', 'swipe_right']
 
     # Initialize buffer for dynamic gestures
@@ -83,7 +86,7 @@ def recognize_gestures():
     buffer = deque(maxlen=sequence_length)
 
     # Start video capture
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
     prev_time = 0
 
     while cap.isOpened():
@@ -120,29 +123,32 @@ def recognize_gestures():
                     static_gesture = static_gestures[static_pred.item()]
                     static_confidence_val = static_confidence_val.item()
 
-                # Add to buffer for dynamic gesture
-                buffer.append(processed_landmarks.cpu().numpy())
+                # # Add to buffer for dynamic gesture
+                # buffer.append(processed_landmarks.cpu().numpy())
 
-                # Dynamic Gesture Prediction
-                if len(buffer) == sequence_length:
-                    dynamic_sequence = np.array(buffer)  # Shape: (seq_len, 63)
-                    # Reshape to (1, seq_len, 63)
-                    dynamic_sequence = torch.FloatTensor(dynamic_sequence).unsqueeze(0).to(device)
+                # # Dynamic Gesture Prediction
+                # if len(buffer) == sequence_length:
+                #     dynamic_sequence = np.array(buffer)  # Shape: (seq_len, 63)
+                #     # Reshape to (1, seq_len, 63)
+                #     dynamic_sequence = torch.FloatTensor(dynamic_sequence).unsqueeze(0).to(device)
 
-                    with torch.no_grad():
-                        dynamic_output = dynamic_model(dynamic_sequence)  # Shape: (1, num_classes)
-                        dynamic_probs = torch.softmax(dynamic_output, dim=1)
-                        dynamic_confidence_val, dynamic_pred = torch.max(dynamic_probs, 1)
-                        dynamic_gesture = dynamic_gestures[dynamic_pred.item()]
-                        dynamic_confidence_val = dynamic_confidence_val.item()
+                #     with torch.no_grad():
+                #         dynamic_output = dynamic_model(dynamic_sequence)  # Shape: (1, num_classes)
+                #         dynamic_probs = torch.softmax(dynamic_output, dim=1)
+                #         dynamic_confidence_val, dynamic_pred = torch.max(dynamic_probs, 1)
+                #         dynamic_gesture = dynamic_gestures[dynamic_pred.item()]
+                #         dynamic_confidence_val = dynamic_confidence_val.item()
 
-                # Decide which gesture to prioritize
-                if len(buffer) == sequence_length and dynamic_confidence_val > static_confidence_val:
-                    gesture = dynamic_gesture
-                    confidence = dynamic_confidence_val
-                else:
-                    gesture = static_gesture
-                    confidence = static_confidence_val
+                # # Decide which gesture to prioritize
+                # if len(buffer) == sequence_length and dynamic_confidence_val > static_confidence_val:
+                #     gesture = dynamic_gesture
+                #     confidence = dynamic_confidence_val
+                # else:
+                #     gesture = static_gesture
+                #     confidence = static_confidence_val
+
+                gesture = static_gesture
+                confidence = static_confidence_val
 
                 # Map gesture to command
                 if confidence > 0.6:  # Confidence threshold

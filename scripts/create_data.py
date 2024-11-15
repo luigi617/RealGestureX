@@ -15,7 +15,7 @@ gestures = ["swipe_up", "swipe_down", "swipe_left", "swipe_right",
 
 dynamic = ["swipe_up", "swipe_down", "swipe_left", "swipe_right"]
 static = ["pointing", "open_palm", "thumb_index_touch", "fist"]
-dataset_path = "gesture_dataset/static/test"
+dataset_path = "gesture_dataset/static/val"
 
 for gesture in gestures:
     os.makedirs(os.path.join(dataset_path, gesture), exist_ok=True)
@@ -141,7 +141,7 @@ while cap.isOpened():
             sequence_data = list(buffer)
             save_landmarks(current_gesture, sequence_data)
             buffer.clear()
-        elif current_gesture in static:
+        elif current_gesture in static and len(buffer) > 0:
             sequence_data = [list(buffer)[-1]]
             save_landmarks(current_gesture, sequence_data)
             buffer.clear()
