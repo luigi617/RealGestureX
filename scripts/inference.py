@@ -57,7 +57,7 @@ def recognize_gestures():
 
     # Load Static Gesture Model
     static_model = StaticGestureModel(input_size=63, num_classes=len(static))
-    static_model.load_state_dict(torch.load('models/static_gesture_model.pth', map_location=device))
+    static_model.load_state_dict(torch.load('best_static_gesture_model.pth', map_location=device))
     static_model.to(device)
     static_model.eval()
 
