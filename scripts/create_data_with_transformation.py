@@ -10,32 +10,12 @@ mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7)
 
 
-
-is_static = True
+gestures = ["swipe_up", "swipe_down", "swipe_left", "swipe_right", 
+            "pointing", "open_palm", "thumb_index_touch", "fist"]
 
 dynamic = ["swipe_up", "swipe_down", "swipe_left", "swipe_right"]
-
-static = [
-    "pointing",
-    "open_palm",
-    "thumb_index_touch",
-    "fist",
-    "thumb_up",
-    "thumb_down",
-    "peace_sign",
-    "crossed_finger",
-    "shaka",
-    "rock_on",
-    "pinched_fingers",
-    "l",
-    "middle_finger",
-]
-if is_static:
-    gestures = static
-    dataset_path = "gesture_dataset/static"
-else:
-    gesture = dynamic
-    dataset_path = "gesture_dataset/dynamic"
+static = ["pointing", "open_palm", "thumb_index_touch", "fist"]
+dataset_path = "gesture_dataset/static/val"
 
 for gesture in gestures:
     os.makedirs(os.path.join(dataset_path, gesture), exist_ok=True)
@@ -55,7 +35,7 @@ def save_landmarks(gesture_name, landmarks):
 def calculate_distance(p1, p2):
     return np.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2)
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(2)
 current_gesture = None
 
 while cap.isOpened():
@@ -84,12 +64,61 @@ while cap.isOpened():
         for hand_landmarks in results.multi_hand_landmarks:
             landmarks = []
 
+            xs = [lm.x for lm in hand_landmarks.landmark]
+            ys = [lm.y for lm in hand_landmarks.landmark]
+            zs = [lm.z for lm in hand_landmarks.landmark]
+
+            # Calculate the mean position (center of the hand)
+            mean_x = np.mean(xs)
+            mean_y = np.mean(ys)
+            mean_z = np.mean(zs)
+
+            # Calculate the ranges
+            x_range = max(xs) - min(xs)
+            y_range = max(ys) - min(ys)
+            z_range = max(zs) - min(zs)
+
+            # Use the maximum range as the hand size
+            hand_size = max(x_range, y_range, z_range)
+
+            # Avoid division by zero
+            if hand_size == 0:
+                hand_size = 1e-6
+
             for lm in hand_landmarks.landmark:
-                landmarks.append([lm.x, lm.y, lm.z])
+                landmarks.append([
+                    (lm.x - mean_x) / hand_size / 3 + 0.2,
+                    (lm.y - mean_y) / hand_size / 3 + 0.2,
+                    (lm.z - mean_z) / hand_size / 3 + 0.2,
+                ])
             
             buffer.append(landmarks)
             
             mp.solutions.drawing_utils.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            
+            for i, lm in enumerate(landmarks):
+                h, w, _ = frame.shape
+                x_px, y_px = int(lm[0] * w), int(lm[1] * h)
+                if 0 <= x_px < w and 0 <= y_px < h:
+                    cv2.circle(frame, (x_px, y_px), 5, (0, 255, 0), -1)  # Green color for normalized landmarks
+                
+            for connection in mp_hands.HAND_CONNECTIONS:
+                start_idx, end_idx = connection
+
+                # Get the start and end landmarks
+                start_lm = landmarks[start_idx]
+                end_lm = landmarks[end_idx]
+
+                # Convert normalized coordinates back to pixel values
+                x_start = int((start_lm[0]) * w)
+                y_start = int((start_lm[1]) * h)
+                x_end = int((end_lm[0]) * w)
+                y_end = int((end_lm[1]) * h)
+
+                # Draw the connection if both points are within frame boundaries
+                if (0 <= x_start < w and 0 <= y_start < h and
+                    0 <= x_end < w and 0 <= y_end < h):
+                    cv2.line(frame, (x_start, y_start), (x_end, y_end), (0, 255, 0), 2)  # Green color
 
 
 
