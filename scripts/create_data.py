@@ -11,7 +11,7 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_c
 
 
 
-is_static = True
+is_static = False
 
 dynamic = ["swipe_up", "swipe_down", "swipe_left", "swipe_right"]
 
@@ -32,7 +32,7 @@ if is_static:
     gestures = static
     dataset_path = "gesture_dataset/static"
 else:
-    gesture = dynamic
+    gestures = dynamic
     dataset_path = "gesture_dataset/dynamic"
 
 for gesture in gestures:
