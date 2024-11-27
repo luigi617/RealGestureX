@@ -35,7 +35,7 @@ def save_landmarks(gesture_name, landmarks):
 def calculate_distance(p1, p2):
     return np.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2)
 
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(1)
 current_gesture = None
 
 while cap.isOpened():

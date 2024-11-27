@@ -27,8 +27,6 @@ static = [
     "shaka",
     "rock_on",
     "pinched_fingers",
-    "l",
-    "middle_finger",
 ]
 if is_static:
     gestures = static
