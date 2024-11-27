@@ -10,7 +10,19 @@ import json
 import numpy as np
 from tqdm import tqdm
 import random
-static = ["pointing", "open_palm", "thumb_index_touch", "fist"]
+static = [
+    "pointing",
+    "open_palm",
+    "thumb_index_touch",
+    "fist",
+    "thumb_up",
+    "thumb_down",
+    "peace_sign",
+    "crossed_finger",
+    "shaka",
+    "rock_on",
+    "pinched_fingers",
+]
 
 def split_data(dir):
     train_dir = {}
@@ -83,7 +95,7 @@ def train_static_gesture_model():
     # Paths
     static_dir = os.getcwd() + '/gesture_dataset/static'
     # Hyperparameters
-    num_epochs = 50
+    num_epochs = 1000
     batch_size = 64
     learning_rate = 1e-3
     num_classes = len(static)
