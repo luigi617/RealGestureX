@@ -13,7 +13,13 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_c
 
 is_static = False
 
-dynamic = ["swipe_up", "swipe_down", "swipe_left", "swipe_right"]
+dynamic = [
+    "swipe_up",
+    "swipe_down",
+    "swipe_left",
+    "swipe_right",
+    "wave",
+]
 
 static = [
     "pointing",
