@@ -39,7 +39,8 @@ for gesture in gestures:
     os.makedirs(os.path.join(dataset_path, gesture), exist_ok=True)
 
 sequence_length = 30
-buffer = deque(maxlen=sequence_length)
+# buffer = deque(maxlen=sequence_length)
+buffer = []
 
 def save_landmarks(gesture_name, landmarks):
     gesture_dir = os.path.join(dataset_path, gesture_name)
@@ -85,7 +86,8 @@ while cap.isOpened():
             for lm in hand_landmarks.landmark:
                 landmarks.append([lm.x, lm.y, lm.z])
             
-            buffer.append(landmarks)
+            if len(buffer) < sequence_length:
+                buffer.append(landmarks)
             
             mp.solutions.drawing_utils.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
