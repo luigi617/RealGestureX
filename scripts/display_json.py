@@ -118,7 +118,7 @@ if __name__ == "__main__":
     # display_gesture_video(single_json_file)
 
     # Alternatively, display all gesture videos in the dataset
-    dataset_directory = 'gesture_dataset/dynamic/swipe_up'  # Replace with your dataset directory path
+    dataset_directory = 'gesture_dataset/dynamic/swipe_down'  # Replace with your dataset directory path
     display_one_gesture_all_videos(dataset_directory)
 
     # dataset_directory = 'gesture_dataset/train'
