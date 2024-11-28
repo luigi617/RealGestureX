@@ -12,44 +12,29 @@ from utils.gesture_commands import map_gesture_to_command
 import time
 
 
-static = ["pointing", "open_palm", "thumb_index_touch", "fist"]
+static = [
+    "pointing",
+    "open_palm",
+    "thumb_index_touch",
+    "fist",
+    "thumb_up",
+    "thumb_down",
+    "peace_sign",
+    "crossed_finger",
+    "shaka",
+    "rock_on",
+    "pinched_fingers",
+]
 
-def execute_command(command):
-    """
-    Executes a specific command based on the recognized gesture.
+dynamic = [
+    "swipe_up",
+    "swipe_down",
+    "swipe_left",
+    "swipe_right",
+    "wave",
+]
 
-    Args:
-        command (str): The command to execute.
-    """
-    if command == 'select_item':
-        print("Command: Select Item")
-        # Implement selection logic here
-    elif command == 'open_menu':
-        print("Command: Open Menu")
-        # Implement menu opening logic here
-    elif command == 'zoom_in':
-        print("Command: Zoom In")
-        # Implement zoom in logic here
-    elif command == 'zoom_out':
-        print("Command: Zoom Out")
-        # Implement zoom out logic here
-    elif command == 'pause':
-        print("Command: Pause")
-        # Implement pause logic here
-    elif command == 'scroll_up':
-        print("Command: Scroll Up")
-        # Implement scroll up logic here
-    elif command == 'scroll_down':
-        print("Command: Scroll Down")
-        # Implement scroll down logic here
-    elif command == 'prev_slide':
-        print("Command: Previous Slide")
-        # Implement previous slide logic here
-    elif command == 'next_slide':
-        print("Command: Next Slide")
-        # Implement next slide logic here
-    else:
-        pass  # No action
+
 
 def recognize_gestures():
     # Device configuration
@@ -57,15 +42,15 @@ def recognize_gestures():
 
     # Load Static Gesture Model
     static_model = StaticGestureModel(input_size=63, num_classes=len(static))
-    static_model.load_state_dict(torch.load('best_static_gesture_model.pth', map_location=device))
+    static_model.load_state_dict(torch.load('models/static_gesture_model.pth', map_location=device))
     static_model.to(device)
     static_model.eval()
 
     # Load Dynamic Gesture Model
-    # dynamic_model = DynamicGestureModel(num_classes=4, hidden_size=128, num_layers=2)
-    # dynamic_model.load_state_dict(torch.load('models/dynamic_gesture_model.pth', map_location=device))
-    # dynamic_model.to(device)
-    # dynamic_model.eval()
+    dynamic_model = DynamicGestureModel(num_classes=len(dynamic), hidden_size=128, num_layers=2)
+    dynamic_model.load_state_dict(torch.load('models/dynamic_gesture_model.pth', map_location=device))
+    dynamic_model.to(device)
+    dynamic_model.eval()
 
     # Initialize MediaPipe Hands
     mp_hands = mp.solutions.hands
@@ -77,9 +62,6 @@ def recognize_gestures():
     )
     mp_drawing = mp.solutions.drawing_utils
 
-    # Gesture labels
-    static_gestures = ['pointing', 'open_palm', 'thumb_index_touch', 'fist']
-    dynamic_gestures = ['swipe_up', 'swipe_down', 'swipe_left', 'swipe_right']
 
     # Initialize buffer for dynamic gestures
     sequence_length = 30  # Number of frames to consider for dynamic gestures
@@ -120,35 +102,35 @@ def recognize_gestures():
                     static_output = static_model(processed_landmarks.unsqueeze(0))  # Shape: (1, num_classes)
                     static_probs = torch.softmax(static_output, dim=1)
                     static_confidence_val, static_pred = torch.max(static_probs, 1)
-                    static_gesture = static_gestures[static_pred.item()]
+                    static_gesture = static[static_pred.item()]
                     static_confidence_val = static_confidence_val.item()
 
-                # # Add to buffer for dynamic gesture
-                # buffer.append(processed_landmarks.cpu().numpy())
+                # Add to buffer for dynamic gesture
+                buffer.append(processed_landmarks.cpu().numpy())
 
-                # # Dynamic Gesture Prediction
-                # if len(buffer) == sequence_length:
-                #     dynamic_sequence = np.array(buffer)  # Shape: (seq_len, 63)
-                #     # Reshape to (1, seq_len, 63)
-                #     dynamic_sequence = torch.FloatTensor(dynamic_sequence).unsqueeze(0).to(device)
+                # Dynamic Gesture Prediction
+                if len(buffer) == sequence_length:
+                    dynamic_sequence = np.array(buffer)  # Shape: (seq_len, 63)
+                    # Reshape to (1, seq_len, 63)
+                    dynamic_sequence = torch.FloatTensor(dynamic_sequence).unsqueeze(0).to(device)
 
-                #     with torch.no_grad():
-                #         dynamic_output = dynamic_model(dynamic_sequence)  # Shape: (1, num_classes)
-                #         dynamic_probs = torch.softmax(dynamic_output, dim=1)
-                #         dynamic_confidence_val, dynamic_pred = torch.max(dynamic_probs, 1)
-                #         dynamic_gesture = dynamic_gestures[dynamic_pred.item()]
-                #         dynamic_confidence_val = dynamic_confidence_val.item()
+                    with torch.no_grad():
+                        dynamic_output = dynamic_model(dynamic_sequence)  # Shape: (1, num_classes)
+                        dynamic_probs = torch.softmax(dynamic_output, dim=1)
+                        dynamic_confidence_val, dynamic_pred = torch.max(dynamic_probs, 1)
+                        dynamic_gesture = dynamic[dynamic_pred.item()]
+                        dynamic_confidence_val = dynamic_confidence_val.item()
 
-                # # Decide which gesture to prioritize
-                # if len(buffer) == sequence_length and dynamic_confidence_val > static_confidence_val:
-                #     gesture = dynamic_gesture
-                #     confidence = dynamic_confidence_val
-                # else:
-                #     gesture = static_gesture
-                #     confidence = static_confidence_val
+                # Decide which gesture to prioritize
+                if len(buffer) == sequence_length and dynamic_confidence_val > static_confidence_val:
+                    gesture = dynamic_gesture
+                    confidence = dynamic_confidence_val
+                else:
+                    gesture = static_gesture
+                    confidence = static_confidence_val
 
-                gesture = static_gesture
-                confidence = static_confidence_val
+                # gesture = static_gesture
+                # confidence = static_confidence_val
 
                 # Map gesture to command
                 if confidence > 0.6:  # Confidence threshold
@@ -156,7 +138,7 @@ def recognize_gestures():
                     cv2.putText(frame, f'Gesture: {gesture} ({confidence*100:.1f}%)', (10, 30),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
                     # Execute command
-                    execute_command(command)
+                    # execute_command(command)
                 else:
                     cv2.putText(frame, f'Gesture: None', (10, 30),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
