@@ -10,20 +10,7 @@ import json
 import numpy as np
 from tqdm import tqdm
 import random
-
-static = [
-    "pointing",
-    "open_palm",
-    "thumb_index_touch",
-    "fist",
-    "thumb_up",
-    "thumb_down",
-    "peace_sign",
-    "crossed_finger",
-    "shaka",
-    "rock_on",
-    "pinched_fingers",
-]
+from models.gesture_classes import static, dynamic
 
 class StaticGestureDataset(Dataset):
     def __init__(self, data_dir:dict, transform=None):
@@ -67,7 +54,7 @@ def train_static_gesture_model():
     batch_size = 64
     learning_rate = 1e-3
     num_classes = len(static)
-    patience = 10  # Early stopping patience
+    patience = 20  # Early stopping patience
     
     train_data, val_data, test_data = split_data(static_dir, static)
     

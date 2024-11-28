@@ -60,7 +60,7 @@ def train_dynamic_gesture_model():
     num_classes = len(dynamic)
     hidden_size = 128
     num_layers = 2
-    patience = 10  # Early stopping patience
+    patience = 20  # Early stopping patience
 
     train_data, val_data, test_data = split_data(static_dir, dynamic)
     
