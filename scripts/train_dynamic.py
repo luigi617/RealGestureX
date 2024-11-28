@@ -5,11 +5,18 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from models.DynamicGestureModel import DynamicGestureModel
-from utils.utils import preprocess_landmarks
+from utils.utils import evaluate, preprocess_landmarks, split_data
 import os
 import json
 import numpy as np
 from tqdm import tqdm
+dynamic = [
+    "swipe_up",
+    "swipe_down",
+    "swipe_left",
+    "swipe_right",
+    "wave",
+]
 
 class DynamicGestureDataset(Dataset):
     def __init__(self, data_dir, sequence_length=30, transform=None):
@@ -21,26 +28,21 @@ class DynamicGestureDataset(Dataset):
         """
         self.data = []
         self.labels = []
-        self.classes = sorted(os.listdir(data_dir))
+        self.classes = list(data_dir.keys())
+        self.transform = transform
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
         self.sequence_length = sequence_length
         
         for cls in self.classes:
-            cls_dir = os.path.join(data_dir, cls)
-            if not os.path.isdir(cls_dir):
-                continue
-            json_files = sorted([f for f in os.listdir(cls_dir) if f.endswith('.json')])
-            for i in range(len(json_files) - sequence_length + 1):
-                seq = json_files[i:i + sequence_length]
-                seq_landmarks = []
-                for jf in seq:
-                    jf_path = os.path.join(cls_dir, jf)
-                    with open(jf_path, 'r') as f:
-                        landmarks = json.load(f)
-                        landmarks = preprocess_landmarks(landmarks).numpy()
-                        seq_landmarks.append(landmarks)
-                self.data.append(seq_landmarks)
-                self.labels.append(self.class_to_idx[cls])
+            for jf_path in data_dir[cls]:
+                with open(jf_path, 'r') as f:
+                    seq_landmarks = []
+                    landmarks = json.load(f)
+                    for landmark in landmarks:
+                        processed_landmark = preprocess_landmarks(landmark).numpy()
+                        seq_landmarks.append(processed_landmark)
+                    self.data.append(seq_landmarks)
+                    self.labels.append(self.class_to_idx[cls])
     
     def __len__(self):
         return len(self.data)
@@ -51,29 +53,31 @@ class DynamicGestureDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
         else:
-            sample = torch.FloatTensor(sample)  # Shape: (seq_len, 63)
+            sample = torch.from_numpy(np.array(sample))  # Shape: (seq_len, 63)
         return sample, label
 
 def train_dynamic_gesture_model():
     # Paths
-    train_dir = 'gesture_dataset/dynamic/train'
-    val_dir = 'gesture_dataset/dynamic/val'
-    
+    static_dir = os.getcwd() + '/gesture_dataset/dynamic'
     # Hyperparameters
-    num_epochs = 50
-    batch_size = 32
-    learning_rate = 1e-4
-    num_classes = 4
+    num_epochs = 1000
+    batch_size = 64
+    learning_rate = 1e-3
+    num_classes = len(dynamic)
     hidden_size = 128
     num_layers = 2
-    
+
+    train_data, val_data, test_data = split_data(static_dir, dynamic)
     # Datasets and Dataloaders
-    train_dataset = DynamicGestureDataset(train_dir, sequence_length=30)
-    val_dataset = DynamicGestureDataset(val_dir, sequence_length=30)
-    
+    # transform = TransformGesture()
+    transform = None
+    train_dataset = DynamicGestureDataset(train_data, transform=transform)
+    val_dataset = DynamicGestureDataset(val_data, transform=transform)
+    test_dataset = DynamicGestureDataset(test_data, transform=transform)
+
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-    
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=4)
     # Model, Loss, Optimizer
     model = DynamicGestureModel(num_classes=num_classes, hidden_size=hidden_size, num_layers=num_layers).to(device)
     criterion = nn.CrossEntropyLoss()
@@ -140,6 +144,21 @@ def train_dynamic_gesture_model():
             best_val_acc = val_epoch_acc
             torch.save(model.state_dict(), 'models/dynamic_gesture_model.pth')
             print(f'Best model saved with Val Acc: {best_val_acc:.2f}%')
+    
+    model.load_state_dict(torch.load('models/dynamic_gesture_model.pth'))
+    model.to(device)
+    train_acc = evaluate(model, train_loader, device)
+    
+    # Evaluate on Validation Set
+    val_acc = evaluate(model, val_loader, device)
+    
+    # Evaluate on Test Set
+    test_acc = evaluate(model, test_loader, device)
+
+    print("\nFinal Accuracies of the Best Model:")
+    print(f"Training Accuracy: {train_acc:.2f}%")
+    print(f"Validation Accuracy: {val_acc:.2f}%")
+    print(f"Test Accuracy: {test_acc:.2f}%")
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+
+
 class StaticGestureModel(nn.Module):
     def __init__(self, input_size=63, num_classes=5):
         super(StaticGestureModel, self).__init__()
