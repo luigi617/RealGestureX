@@ -5,37 +5,16 @@ import os
 from collections import deque
 import time
 import numpy as np
+from models.gesture_classes import static, dynamic
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7)
 
 
 
-is_static = False
+is_static = True
 
-dynamic = [
-    "swipe_up",
-    "swipe_down",
-    "swipe_left",
-    "swipe_right",
-    "wave",
-    "not_moving",
-    "moving_slowly",
-]
 
-static = [
-    "pointing",
-    "open_palm",
-    "thumb_index_touch",
-    "fist",
-    "thumb_up",
-    "thumb_down",
-    "peace_sign",
-    "crossed_finger",
-    "shaka",
-    "rock_on",
-    "pinched_fingers",
-]
 if is_static:
     gestures = static
     dataset_path = "gesture_dataset/static"

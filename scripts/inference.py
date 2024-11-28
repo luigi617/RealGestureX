@@ -10,29 +10,9 @@ from collections import deque
 import numpy as np
 from utils.gesture_commands import map_gesture_to_command
 import time
+from models.gesture_classes import static, dynamic
 
 
-static = [
-    "pointing",
-    "open_palm",
-    "thumb_index_touch",
-    "fist",
-    "thumb_up",
-    "thumb_down",
-    "peace_sign",
-    "crossed_finger",
-    "shaka",
-    "rock_on",
-    "pinched_fingers",
-]
-
-dynamic = [
-    "swipe_up",
-    "swipe_down",
-    "swipe_left",
-    "swipe_right",
-    "wave",
-]
 
 
 

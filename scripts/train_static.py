@@ -10,20 +10,7 @@ import json
 import numpy as np
 from tqdm import tqdm
 import random
-
-static = [
-    "pointing",
-    "open_palm",
-    "thumb_index_touch",
-    "fist",
-    "thumb_up",
-    "thumb_down",
-    "peace_sign",
-    "crossed_finger",
-    "shaka",
-    "rock_on",
-    "pinched_fingers",
-]
+from models.gesture_classes import static, dynamic
 
 class StaticGestureDataset(Dataset):
     def __init__(self, data_dir:dict, transform=None):

@@ -8,14 +8,8 @@ import os
 import json
 import numpy as np
 from tqdm import tqdm
+from models.gesture_classes import static, dynamic
 
-dynamic = [
-    "swipe_up",
-    "swipe_down",
-    "swipe_left",
-    "swipe_right",
-    "wave",
-]
 
 class DynamicGestureDataset(Dataset):
     def __init__(self, data_dir, sequence_length=30, transform=None):
