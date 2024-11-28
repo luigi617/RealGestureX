@@ -122,7 +122,7 @@ def recognize_gestures():
                         dynamic_confidence_val = dynamic_confidence_val.item()
 
                 # Decide which gesture to prioritize
-                if len(buffer) == sequence_length and dynamic_confidence_val > static_confidence_val:
+                if len(buffer) == sequence_length and dynamic_confidence_val > 0.8 and dynamic_confidence_val > static_confidence_val:
                     gesture = dynamic_gesture
                     confidence = dynamic_confidence_val
                 else:

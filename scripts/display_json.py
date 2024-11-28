@@ -6,15 +6,12 @@ import os
 from glob import glob
 import time
 
-from models.transformGesture import TransformGesture
-from utils.utils import preprocess_landmarks
 
 # Initialize MediaPipe Hands for connections
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 HAND_CONNECTIONS = mp_hands.HAND_CONNECTIONS
 
-transform = TransformGesture()
 
 def load_gesture_json(json_file_path):
 
@@ -124,7 +121,8 @@ if __name__ == "__main__":
     # display_gesture_video(single_json_file)
 
     # Alternatively, display all gesture videos in the dataset
-    dataset_directory = 'gesture_dataset/static/rock_on'  # Replace with your dataset directory path
+    # dataset_directory = 'gesture_dataset/static/rock_on'  # Replace with your dataset directory path
+    dataset_directory = 'gesture_dataset/dynamic/swipe_up'  # Replace with your dataset directory path
     display_one_gesture_all_videos(dataset_directory)
 
     # dataset_directory = 'gesture_dataset/train'
