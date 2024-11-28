@@ -77,6 +77,11 @@ def recognize_gestures():
                     landmarks.extend([lm.x, lm.y, lm.z])
                 processed_landmarks = preprocess_landmarks(landmarks).to(device)
 
+                dynamic_gesture = None
+                dynamic_confidence_val = 0.0
+                static_gesture = None
+                static_confidence_val = 0.0
+
                 # Static Gesture Prediction
                 with torch.no_grad():
                     static_output = static_model(processed_landmarks.unsqueeze(0))  # Shape: (1, num_classes)
@@ -102,9 +107,13 @@ def recognize_gestures():
                         dynamic_confidence_val = dynamic_confidence_val.item()
 
                 # Decide which gesture to prioritize
-                if len(buffer) == sequence_length and dynamic_confidence_val > 0.8 and dynamic_confidence_val > static_confidence_val:
+                if dynamic_gesture and \
+                    dynamic_confidence_val > static_confidence_val and \
+                        dynamic_gesture not in ["not_moving", "moving_slowly"]:
+                    
                     gesture = dynamic_gesture
                     confidence = dynamic_confidence_val
+                    buffer.clear()
                 else:
                     gesture = static_gesture
                     confidence = static_confidence_val
