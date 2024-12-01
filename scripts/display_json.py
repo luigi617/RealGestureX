@@ -109,6 +109,7 @@ def display_one_gesture_all_videos(gesture_dir, frame_rate=30, canvas_size=(640,
         
 
     json_files = glob(os.path.join(gesture_dir, '*.json'))
+    json_files.sort(reverse=True)
     for json_file in json_files:
         print(f"Displaying gesture '{gesture_dir.split('/')[-1]}' from file: {json_file}")
         display_gesture_video(json_file, frame_rate, canvas_size)
@@ -117,12 +118,12 @@ def display_one_gesture_all_videos(gesture_dir, frame_rate=30, canvas_size=(640,
 if __name__ == "__main__":
     # Path to a single JSON file
     # single_json_file = 'gesture_dataset/train/swipe_up/swipe_up_1730858820.json'
-    # single_json_file = 'gesture_dataset/train/pointing/pointing_1730859898.json'
+    # single_json_file = 'gesture_dataset/dynamic/swipe_up/swipe_up_1733029083.json'
     # display_gesture_video(single_json_file)
 
     # Alternatively, display all gesture videos in the dataset
     # dataset_directory = 'gesture_dataset/static/rock_on'  # Replace with your dataset directory path
-    dataset_directory = 'gesture_dataset/dynamic/swipe_up'  # Replace with your dataset directory path
+    dataset_directory = 'gesture_dataset/dynamic/moving_slowly'  # Replace with your dataset directory path
     display_one_gesture_all_videos(dataset_directory)
 
     # dataset_directory = 'gesture_dataset/train'

@@ -12,7 +12,7 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_c
 
 
 
-is_static = True
+is_static = False
 
 
 if is_static:
