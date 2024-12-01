@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
+import torchvision
 
 from models.HandDetectionModel import HandDetectionModel
 from models.HandLandmarkTrackingModel import HandLandmarkModel
@@ -71,7 +72,6 @@ class HandTrackingDataset(Dataset):
             data = json.load(f)
             landmarks = np.array(data).flatten()  # Flatten to a 1D array of length 63 (21 landmarks * 3 coordinates)
         return landmarks
-    
 
 def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, num_epochs=10, patience=5):
     model.train()
@@ -87,7 +87,14 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
             bboxes = bboxes.to(device)  # Move bounding boxes to GPU
 
             optimizer.zero_grad()
-            outputs = model(images)  # Predicted bounding boxes
+            targets = []
+            for bbox in bboxes:
+                target = {
+                    'boxes': bbox.unsqueeze(0),  # Bounding box in format [x_min, y_min, x_max, y_max]
+                    'labels': torch.tensor([1], dtype=torch.int64).to(device)  # Hand class label
+                }
+                targets.append(target)
+            outputs = model(images, targets)  # Predicted bounding boxes
             
             # Calculate loss (using MSE loss or other loss)
             loss = criterion(outputs, bboxes)
@@ -119,8 +126,14 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
             for images, _, bboxes, _ in loop:
                 images = images.to(device)  # Move images to GPU
                 bboxes = bboxes.to(device)  # Move bounding boxes to GPU
-
-                outputs = model(images)  # Predicted bounding boxes
+                targets = []
+                for bbox in bboxes:
+                    target = {
+                        'boxes': bbox.unsqueeze(0),  # Bounding box in format [x_min, y_min, x_max, y_max]
+                        'labels': torch.tensor([1], dtype=torch.int64).to(device)  # Hand class label
+                    }
+                    targets.append(target)
+                outputs = model(images, targets)  # Predicted bounding boxes
                 loss = criterion(outputs, bboxes)
                 val_loss += loss.item()
 
@@ -147,62 +160,6 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
         if patience_counter >= patience:
             print(f"Early stopping at epoch {epoch+1}")
             break
-# Training Loop for Landmark Detection with Early Stopping and Accuracy Reporting
-def train_landmark_detection(model, train_loader, val_loader, criterion, optimizer, num_epochs=10, patience=5):
-    model.train()
-    best_val_loss = float('inf')
-    patience_counter = 0
-    for epoch in range(num_epochs):
-        running_loss = 0.0
-        total_accuracy = 0
-        loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
-        for _, cropped_images, _, landmarks in loop:
-            cropped_images = cropped_images.to(device)  # Move images to GPU
-            landmarks = landmarks.to(device)  # Move bounding boxes to GPU
-
-            optimizer.zero_grad()
-            outputs = model(cropped_images)
-            loss = criterion(outputs, landmarks)
-            loss.backward()
-            optimizer.step()
-            torch.cuda.empty_cache()
-
-            running_loss += loss.item()
-
-            # Calculate accuracy for landmarks (Mean Absolute Error)
-            accuracy = calculate_mae(outputs, landmarks)
-            total_accuracy += accuracy.item()
-
-        # Validation Loss and Early Stopping
-        val_loss = 0.0
-        model.eval()
-        with torch.no_grad():
-            loop = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
-            for _, cropped_images, _, landmarks in loop:
-                cropped_images = cropped_images.to(device)  # Move cropped_images to GPU
-                landmarks = landmarks.to(device)  # Move bounding boxes to GPU
-
-                outputs = model(cropped_images)
-                loss = criterion(outputs, landmarks)
-                val_loss += loss.item()
-
-        avg_train_loss = running_loss / len(train_loader)
-        avg_val_loss = val_loss / len(val_loader)
-        avg_accuracy = total_accuracy / len(train_loader)
-        print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
-
-        # Early stopping
-        if avg_val_loss < best_val_loss:
-            best_val_loss = avg_val_loss
-            patience_counter = 0  # Reset patience counter if validation loss improves
-            torch.save(model.state_dict(), 'models/parameters/hand_landmark_model.pth')
-        else:
-            patience_counter += 1
-        
-        if patience_counter >= patience:
-            print(f"Early stopping at epoch {epoch+1}")
-            break
-
 
 image_transform = transforms.Compose([
     transforms.Resize((320, 320)),      # Resize image to 128x128
@@ -211,12 +168,13 @@ image_transform = transforms.Compose([
 ])
 
 cropped_image_transform = transforms.Compose([
-    transforms.Resize((128, 128)),      # Resize image to 128x128
-    transforms.ToTensor(),              # Convert to Tensor
+    transforms.Resize((128, 128)),  # Resize cropped images
+    transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Example normalization
 ])
 
-# data_dir= os.getcwd() + 'hand_tracking_dataset'
+
+
 data_dir= 'hand_tracking_dataset'
 
 num_epochs = 1000
@@ -237,14 +195,16 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
 
-hand_detection_model = HandDetectionModel().to(device)
-bbox_criterion = nn.MSELoss()
-bbox_optimizer = optim.Adam(hand_detection_model.parameters(), lr=0.001)
+hand_detection_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+hand_detection_model.to(device)
+num_classes = 2  # Background + hand
+in_features = hand_detection_model.roi_heads.box_predictor.cls_score.in_features
+hand_detection_model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes)
+params = [p for p in hand_detection_model.parameters() if p.requires_grad]
+optimizer = optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+bbox_criterion = nn.SmoothL1Loss()
 
 
-hand_landmark_model = HandLandmarkModel().to(device)
-landmark_criterion = nn.MSELoss()
-landmark_optimizer = optim.Adam(hand_landmark_model.parameters(), lr=0.001)
 
-train_hand_detection(hand_detection_model, train_loader, val_loader, bbox_criterion, bbox_optimizer, num_epochs, patience)
-train_landmark_detection(hand_landmark_model, train_loader, val_loader, landmark_criterion, landmark_optimizer, num_epochs, patience)
+train_hand_detection(hand_detection_model, train_loader, val_loader, bbox_criterion, optimizer, num_epochs, patience)
+
