@@ -57,9 +57,7 @@ class HandTrackingDataset(Dataset):
         with open(bbox_path, 'r') as f:
             # Assuming bbox format: x_min y_min x_max y_max
             bbox = list(map(float, f.read().strip().split()))
-        print(bbox_path)
-        print(bbox)
-        return bbox[1:]
+        return bbox
     
     def load_landmark(self, landmark_path):
         with open(landmark_path, 'r') as f:

@@ -76,7 +76,7 @@ def save_data(frame, hand_data, index):
 
         # Write to YOLO txt file (class_id, x_center, y_center, width, height)
         with open(yolo_filename, 'a') as f:
-            f.write(f"0 {x_center} {y_center} {width} {height}\n")
+            f.write(f"{x_center} {y_center} {width} {height}\n")
 
 def resize_with_aspect_ratio(frame, target_width=800):
     h, w, _ = frame.shape
