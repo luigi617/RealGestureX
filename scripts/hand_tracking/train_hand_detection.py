@@ -216,7 +216,7 @@ cropped_image_transform = transforms.Compose([
 data_dir= 'hand_tracking_dataset'
 
 num_epochs = 1000
-batch_size = 64
+batch_size = 32
 learning_rate = 1e-3
 patience = 20  # Early stopping patience
 
