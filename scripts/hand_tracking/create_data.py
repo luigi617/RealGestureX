@@ -90,7 +90,7 @@ while cap.isOpened():
     if not ret:
         break
     # frame = cv2.resize(frame, (800, 800))
-    frame = resize_with_aspect_ratio(frame, target_width=800)
+    frame = resize_with_aspect_ratio(frame, target_width=320)
 
     # Extract hand bounding boxes and landmarks
     hand_data = extract_hand_bbox_and_landmarks(frame)

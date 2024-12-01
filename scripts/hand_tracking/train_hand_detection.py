@@ -205,7 +205,7 @@ def train_landmark_detection(model, train_loader, val_loader, criterion, optimiz
 
 
 image_transform = transforms.Compose([
-    transforms.Resize((640, 640)),      # Resize image to 128x128
+    transforms.Resize((320, 320)),      # Resize image to 128x128
     transforms.ToTensor(),              # Convert to Tensor
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Example normalization
 ])
@@ -220,7 +220,7 @@ cropped_image_transform = transforms.Compose([
 data_dir= 'hand_tracking_dataset'
 
 num_epochs = 1000
-batch_size = 32
+batch_size = 16
 learning_rate = 1e-3
 patience = 20  # Early stopping patience
 
