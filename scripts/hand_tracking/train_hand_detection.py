@@ -133,6 +133,7 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
                         'labels': torch.tensor([1], dtype=torch.int64).to(device)  # Hand class label
                     }
                     targets.append(target)
+                targets.to(device)
                 outputs = model(images, targets)  # Predicted bounding boxes
                 loss = criterion(outputs, bboxes)
                 val_loss += loss.item()
