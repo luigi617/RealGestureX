@@ -68,15 +68,14 @@ def save_data(frame, hand_data, index):
         h, w, _ = frame.shape
         x_min, y_min, x_max, y_max = hand['bbox']
         
-        # Convert pixel values to YOLO normalized format
-        x_center = (x_min + x_max) / 2 / w
-        y_center = (y_min + y_max) / 2 / h
-        width = (x_max - x_min) / w
-        height = (y_max - y_min) / h
 
-        # Write to YOLO txt file (class_id, x_center, y_center, width, height)
+        # x_center = (x_min + x_max) / 2 / w
+        # y_center = (y_min + y_max) / 2 / h
+        # width = (x_max - x_min) / w
+        # height = (y_max - y_min) / h
+
         with open(yolo_filename, 'a') as f:
-            f.write(f"{x_center} {y_center} {width} {height}\n")
+            f.write(f"{x_min} {y_min} {x_max} {y_max}")
 
 def resize_with_aspect_ratio(frame, target_width=800):
     h, w, _ = frame.shape

@@ -7,6 +7,8 @@ import json
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from PIL import Image
+from tqdm import tqdm
 
 from models.HandDetectionModel import HandDetectionModel
 from models.HandLandmarkTrackingModel import HandLandmarkModel
@@ -17,7 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 class HandTrackingDataset(Dataset):
-    def __init__(self, data_dir, transform=None):
+    def __init__(self, data_dir, image_transform=None, cropped_image_transform=None):
         self.image_paths = data_dir["image"]      # Path to the images directory
         self.bbox_paths = data_dir["hand"]        # Path to the bounding boxes directory
         self.landmark_paths = data_dir["landmark"] # Path to the landmarks directory
@@ -25,7 +27,8 @@ class HandTrackingDataset(Dataset):
         assert len(self.image_paths) == len(self.bbox_paths) == len(self.landmark_paths), \
             "Mismatch between the number of images, bounding boxes, and landmarks files."
         
-        self.transform = transform
+        self.image_transform = image_transform
+        self.cropped_image_transform = cropped_image_transform
     
     def __len__(self):
         return len(self.image_paths)
@@ -34,6 +37,7 @@ class HandTrackingDataset(Dataset):
         # Load the image
         image = cv2.imread(self.image_paths[idx])  # Read image
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert to RGB
+        
 
         # Load the bounding box
         bbox = self.load_bbox(self.bbox_paths[idx])
@@ -44,19 +48,21 @@ class HandTrackingDataset(Dataset):
         # Crop the image using the bounding box (hand detection)
         x_min, y_min, x_max, y_max = bbox
         cropped_image = image[y_min:y_max, x_min:x_max]
-        
-        # Resize image for consistency (e.g., 128x128)
-        cropped_image = cv2.resize(cropped_image, (128, 128))
 
-        if self.transform:
-            cropped_image = self.transform(cropped_image)
+        if self.image_transform:
+            image = Image.fromarray(image)
+            image = self.image_transform(image)
+
+        if self.cropped_image_transform:
+            cropped_image = Image.fromarray(cropped_image)
+            cropped_image = self.cropped_image_transform(cropped_image)
         
-        return cropped_image, torch.tensor(bbox, dtype=torch.float), torch.tensor(landmarks, dtype=torch.float)
+        return image, cropped_image, torch.tensor(bbox, dtype=torch.float), torch.tensor(landmarks, dtype=torch.float)
     
     def load_bbox(self, bbox_path):
         with open(bbox_path, 'r') as f:
             # Assuming bbox format: x_min y_min x_max y_max
-            bbox = list(map(float, f.read().strip().split()))
+            bbox = list(map(int, f.read().strip().split()))
         return bbox
     
     def load_landmark(self, landmark_path):
@@ -75,27 +81,27 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
         running_loss = 0.0
         total_iou_train = 0.0  # Track total IoU for training
         total_samples = 0
-
-        for images, bboxes, _ in train_loader:
-            images = images.to(device)  # Move images to GPU
-            bboxes = bboxes.to(device)  # Move bounding boxes to GPU
+        loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
+        for image, _, bbox, _ in loop:
+            image = image.to(device)  # Move images to GPU
+            bbox = bbox.to(device)  # Move bounding boxes to GPU
 
             optimizer.zero_grad()
-            outputs = model(images)  # Predicted bounding boxes
+            outputs = model(image)  # Predicted bounding boxes
             
             # Calculate loss (using MSE loss or other loss)
-            loss = criterion(outputs, bboxes)
+            loss = criterion(outputs, bbox)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
 
             # Calculate IoU for each prediction in the batch
             batch_iou = 0.0
-            for pred_bbox, true_bbox in zip(outputs, bboxes):
+            for pred_bbox, true_bbox in zip(outputs, bbox):
                 iou = calculate_iou(pred_bbox.detach().cpu().numpy(), true_bbox.detach().cpu().numpy())
                 batch_iou += iou
             total_iou_train += batch_iou
-            total_samples += len(images)
+            total_samples += 1
 
         avg_train_loss = running_loss / len(train_loader)
         avg_iou_train = total_iou_train / total_samples  # Average IoU for the training set
@@ -107,21 +113,22 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
         val_samples = 0
         model.eval()
         with torch.no_grad():
-            for images, bboxes, _ in val_loader:
-                images = images.to(device)  # Move images to GPU
-                bboxes = bboxes.to(device)  # Move bounding boxes to GPU
+            loop = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
+            for image, _, bbox, _ in loop:
+                image = image.to(device)  # Move images to GPU
+                bbox = bbox.to(device)  # Move bounding boxes to GPU
 
-                outputs = model(images)  # Predicted bounding boxes
-                loss = criterion(outputs, bboxes)
+                outputs = model(image)  # Predicted bounding boxes
+                loss = criterion(outputs, bbox)
                 val_loss += loss.item()
 
                 # Calculate IoU for validation batch
                 batch_iou = 0.0
-                for pred_bbox, true_bbox in zip(outputs, bboxes):
+                for pred_bbox, true_bbox in zip(outputs, bbox):
                     iou = calculate_iou(pred_bbox.detach().cpu().numpy(), true_bbox.detach().cpu().numpy())
                     batch_iou += iou
                 total_iou_val += batch_iou
-                val_samples += len(images)
+                val_samples += 1
 
         avg_val_loss = val_loss / len(val_loader)
         avg_iou_val = total_iou_val / val_samples  # Average IoU for the validation set
@@ -146,12 +153,13 @@ def train_landmark_detection(model, train_loader, val_loader, criterion, optimiz
     for epoch in range(num_epochs):
         running_loss = 0.0
         total_accuracy = 0
-        for images, _, landmarks in train_loader:
-            images = images.to(device)  # Move images to GPU
+        loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
+        for _, cropped_image, _, landmarks in loop:
+            cropped_image = cropped_image.to(device)  # Move images to GPU
             landmarks = landmarks.to(device)  # Move bounding boxes to GPU
 
             optimizer.zero_grad()
-            outputs = model(images)
+            outputs = model(cropped_image)
             loss = criterion(outputs, landmarks)
             loss.backward()
             optimizer.step()
@@ -165,11 +173,12 @@ def train_landmark_detection(model, train_loader, val_loader, criterion, optimiz
         val_loss = 0.0
         model.eval()
         with torch.no_grad():
-            for images, _, landmarks in val_loader:
-                images = images.to(device)  # Move images to GPU
+            loop = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
+            for _, cropped_image, _, landmarks in loop:
+                cropped_image = cropped_image.to(device)  # Move cropped_image to GPU
                 landmarks = landmarks.to(device)  # Move bounding boxes to GPU
 
-                outputs = model(images)
+                outputs = model(cropped_image)
                 loss = criterion(outputs, landmarks)
                 val_loss += loss.item()
 
@@ -191,7 +200,14 @@ def train_landmark_detection(model, train_loader, val_loader, criterion, optimiz
             break
 
 
-transform = transforms.Compose([
+image_transform = transforms.Compose([
+    transforms.Resize((640, 640)),      # Resize image to 128x128
+    transforms.ToTensor(),              # Convert to Tensor
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Example normalization
+])
+
+cropped_image_transform = transforms.Compose([
+    transforms.Resize((128, 128)),      # Resize image to 128x128
     transforms.ToTensor(),              # Convert to Tensor
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Example normalization
 ])
@@ -206,9 +222,9 @@ patience = 20  # Early stopping patience
 
 train_data, val_data, test_data = split_data(data_dir, ["image", "hand", "landmark"], [".jpg", ".txt", ".json"])
 # Instantiate dataset
-train_dataset = HandTrackingDataset(data_dir=train_data, transform=transform)
-val_dataset = HandTrackingDataset(data_dir=val_data, transform=transform)
-test_dataset = HandTrackingDataset(data_dir=test_data, transform=transform)
+train_dataset = HandTrackingDataset(data_dir=train_data, image_transform=image_transform, cropped_image_transform=cropped_image_transform)
+val_dataset = HandTrackingDataset(data_dir=val_data, image_transform=image_transform, cropped_image_transform=cropped_image_transform)
+test_dataset = HandTrackingDataset(data_dir=test_data, image_transform=image_transform, cropped_image_transform=cropped_image_transform)
 
 # Create DataLoader
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
