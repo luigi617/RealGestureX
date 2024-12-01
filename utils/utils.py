@@ -83,6 +83,7 @@ def calculate_iou(pred_bbox, true_bbox):
     # Calculate IoU
     iou = inter_area / union_area if union_area != 0 else 0
     return iou
+
 def calculate_mae(pred_landmarks, true_landmarks):
     return torch.mean(torch.abs(pred_landmarks - true_landmarks))
 

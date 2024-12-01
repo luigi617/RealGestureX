@@ -82,15 +82,15 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
         total_iou_train = 0.0  # Track total IoU for training
         total_samples = 0
         loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
-        for image, _, bbox, _ in loop:
-            image = image.to(device)  # Move images to GPU
-            bbox = bbox.to(device)  # Move bounding boxes to GPU
+        for images, _, bboxes, _ in loop:
+            images = images.to(device)  # Move images to GPU
+            bboxes = bboxes.to(device)  # Move bounding boxes to GPU
 
             optimizer.zero_grad()
-            outputs = model(image)  # Predicted bounding boxes
+            outputs = model(images)  # Predicted bounding boxes
             
             # Calculate loss (using MSE loss or other loss)
-            loss = criterion(outputs, bbox)
+            loss = criterion(outputs, bboxes)
             loss.backward()
             optimizer.step()
             torch.cuda.empty_cache()
@@ -99,11 +99,11 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
 
             # Calculate IoU for each prediction in the batch
             batch_iou = 0.0
-            for pred_bbox, true_bbox in zip(outputs, bbox):
+            for pred_bbox, true_bbox in zip(outputs, bboxes):
                 iou = calculate_iou(pred_bbox.detach().cpu().numpy(), true_bbox.detach().cpu().numpy())
                 batch_iou += iou
             total_iou_train += batch_iou
-            total_samples += 1
+            total_samples += len(images)
 
         avg_train_loss = running_loss / len(train_loader)
         avg_iou_train = total_iou_train / total_samples  # Average IoU for the training set
@@ -116,21 +116,21 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
         model.eval()
         with torch.no_grad():
             loop = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
-            for image, _, bbox, _ in loop:
-                image = image.to(device)  # Move images to GPU
-                bbox = bbox.to(device)  # Move bounding boxes to GPU
+            for images, _, bboxes, _ in loop:
+                images = images.to(device)  # Move images to GPU
+                bboxes = bboxes.to(device)  # Move bounding boxes to GPU
 
-                outputs = model(image)  # Predicted bounding boxes
-                loss = criterion(outputs, bbox)
+                outputs = model(images)  # Predicted bounding boxes
+                loss = criterion(outputs, bboxes)
                 val_loss += loss.item()
 
                 # Calculate IoU for validation batch
                 batch_iou = 0.0
-                for pred_bbox, true_bbox in zip(outputs, bbox):
+                for pred_bbox, true_bbox in zip(outputs, bboxes):
                     iou = calculate_iou(pred_bbox.detach().cpu().numpy(), true_bbox.detach().cpu().numpy())
                     batch_iou += iou
                 total_iou_val += batch_iou
-                val_samples += 1
+                val_samples += len(images)
 
         avg_val_loss = val_loss / len(val_loader)
         avg_iou_val = total_iou_val / val_samples  # Average IoU for the validation set
@@ -156,12 +156,12 @@ def train_landmark_detection(model, train_loader, val_loader, criterion, optimiz
         running_loss = 0.0
         total_accuracy = 0
         loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
-        for _, cropped_image, _, landmarks in loop:
-            cropped_image = cropped_image.to(device)  # Move images to GPU
+        for _, cropped_images, _, landmarks in loop:
+            cropped_images = cropped_images.to(device)  # Move images to GPU
             landmarks = landmarks.to(device)  # Move bounding boxes to GPU
 
             optimizer.zero_grad()
-            outputs = model(cropped_image)
+            outputs = model(cropped_images)
             loss = criterion(outputs, landmarks)
             loss.backward()
             optimizer.step()
@@ -178,11 +178,11 @@ def train_landmark_detection(model, train_loader, val_loader, criterion, optimiz
         model.eval()
         with torch.no_grad():
             loop = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
-            for _, cropped_image, _, landmarks in loop:
-                cropped_image = cropped_image.to(device)  # Move cropped_image to GPU
+            for _, cropped_images, _, landmarks in loop:
+                cropped_images = cropped_images.to(device)  # Move cropped_images to GPU
                 landmarks = landmarks.to(device)  # Move bounding boxes to GPU
 
-                outputs = model(cropped_image)
+                outputs = model(cropped_images)
                 loss = criterion(outputs, landmarks)
                 val_loss += loss.item()
 
