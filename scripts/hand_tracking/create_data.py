@@ -32,6 +32,7 @@ def extract_hand_bbox_and_landmarks(frame):
             x_min, y_min, x_max, y_max = int(x_min * w), int(y_min * h), int(x_max * w), int(y_max * h)
 
             # Collect landmarks and bounding box data
+            # mp.solutions.drawing_utils.draw_landmarks(frame, landmarks, mp_hands.HAND_CONNECTIONS)
             hand_landmarks = [(lm.x - x_min, lm.y - y_min, lm.z) for lm in landmarks.landmark]
             hand_data.append({
                 'bbox': [x_min, y_min, x_max, y_max],
@@ -83,7 +84,7 @@ def resize_with_aspect_ratio(frame, target_width=800):
     target_height = int(target_width / aspect_ratio)
     return cv2.resize(frame, (target_width, target_height))
 cap = cv2.VideoCapture(2)
-saved_i = set()
+t=0
 while cap.isOpened():
     ret, frame = cap.read()
     frame = cv2.flip(frame, 1)
@@ -97,19 +98,14 @@ while cap.isOpened():
     
     if hand_data:
         # Save the image, hand crops, and landmarks
-        t = int(time.time())
-        if t not in saved_i:
-            save_data(frame, hand_data, t)
-            saved_i.add(t)
+        save_data(frame, hand_data, t)
+        t += 1
 
         # Draw bounding boxes and landmarks on the frame for visualization
         for hand in hand_data:
             x_min, y_min, x_max, y_max = hand['bbox']
             cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
             
-            # Draw landmarks
-            for lm in hand['landmarks']:
-                cv2.circle(frame, (int(lm[0]), int(lm[1])), 5, (0, 0, 255), -1)
 
     # Display the image with bounding boxes and landmarks
     cv2.imshow('Hand Detection', frame)
