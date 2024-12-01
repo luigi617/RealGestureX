@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     # Alternatively, display all gesture videos in the dataset
     # dataset_directory = 'gesture_dataset/static/rock_on'  # Replace with your dataset directory path
-    dataset_directory = 'gesture_dataset/dynamic/swipe_left'  # Replace with your dataset directory path
+    dataset_directory = 'gesture_dataset/dynamic/moving_slowly'  # Replace with your dataset directory path
     display_one_gesture_all_videos(dataset_directory)
 
     # dataset_directory = 'gesture_dataset/train'
