@@ -84,7 +84,7 @@ def resize_with_aspect_ratio(frame, target_width=800):
     target_height = int(target_width / aspect_ratio)
     return cv2.resize(frame, (target_width, target_height))
 cap = cv2.VideoCapture(2)
-
+saved_i = set()
 while cap.isOpened():
     ret, frame = cap.read()
     frame = cv2.flip(frame, 1)
@@ -98,7 +98,10 @@ while cap.isOpened():
     
     if hand_data:
         # Save the image, hand crops, and landmarks
-        save_data(frame, hand_data, int(time.time()))
+        t = int(time.time())
+        if t not in saved_i:
+            save_data(frame, hand_data, t)
+            saved_i.add(t)
 
         # Draw bounding boxes and landmarks on the frame for visualization
         for hand in hand_data:
