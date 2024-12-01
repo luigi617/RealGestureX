@@ -32,7 +32,7 @@ def extract_hand_bbox_and_landmarks(frame):
             x_min, y_min, x_max, y_max = int(x_min * w), int(y_min * h), int(x_max * w), int(y_max * h)
 
             # Collect landmarks and bounding box data
-            hand_landmarks = [(lm.x * w, lm.y * h) for lm in landmarks.landmark]
+            hand_landmarks = [(lm.x - x_min, lm.y - y_min, lm.z) for lm in landmarks.landmark]
             hand_data.append({
                 'bbox': [x_min, y_min, x_max, y_max],
                 'landmarks': hand_landmarks
