@@ -5,7 +5,7 @@ import os
 from collections import deque
 import time
 import numpy as np
-from models.gesture_classes import static, dynamic
+from models.GestureClasses import static, dynamic
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7)

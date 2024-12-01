@@ -3,14 +3,14 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from models.StaticGestureModel import StaticGestureModel
-from models.transformGesture import TransformGesture
+from useless.transformGesture import TransformGesture
 from utils.utils import preprocess_landmarks, split_data, evaluate
 import os
 import json
 import numpy as np
 from tqdm import tqdm
 import random
-from models.gesture_classes import static, dynamic
+from models.GestureClasses import static, dynamic
 
 class StaticGestureDataset(Dataset):
     def __init__(self, data_dir:dict, transform=None):
@@ -135,7 +135,7 @@ def train_static_gesture_model():
             best_val_acc = val_epoch_acc
             epochs_without_improvement = 0  # Reset counter
             # Save the best model
-            torch.save(model.state_dict(), 'models/static_gesture_model.pth')
+            torch.save(model.state_dict(), 'models/parameters/static_gesture_model.pth')
             print(f'Best model saved with Val Acc: {best_val_acc:.2f}%')
         else:
             epochs_without_improvement += 1
@@ -146,7 +146,7 @@ def train_static_gesture_model():
             break
     
     # Load the best model and evaluate
-    model.load_state_dict(torch.load('models/static_gesture_model.pth'))
+    model.load_state_dict(torch.load('models/parameters/static_gesture_model.pth'))
     model.to(device)
     train_acc = evaluate(model, train_loader, device)
     

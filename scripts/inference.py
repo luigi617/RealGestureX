@@ -8,9 +8,9 @@ from models.DynamicGestureModel import DynamicGestureModel
 from utils.utils import preprocess_landmarks
 from collections import deque
 import numpy as np
-from utils.gesture_commands import map_gesture_to_command
+from utils.utils import map_gesture_to_command
 import time
-from models.gesture_classes import static, dynamic
+from models.GestureClasses import static, dynamic
 
 
 
@@ -22,13 +22,13 @@ def recognize_gestures():
 
     # Load Static Gesture Model
     static_model = StaticGestureModel(input_size=63, num_classes=len(static))
-    static_model.load_state_dict(torch.load('models/static_gesture_model.pth', map_location=device))
+    static_model.load_state_dict(torch.load('models/parameters/static_gesture_model.pth', map_location=device))
     static_model.to(device)
     static_model.eval()
 
     # Load Dynamic Gesture Model
     dynamic_model = DynamicGestureModel(num_classes=len(dynamic), hidden_size=128, num_layers=2)
-    dynamic_model.load_state_dict(torch.load('models/dynamic_gesture_model.pth', map_location=device))
+    dynamic_model.load_state_dict(torch.load('models/parameters/dynamic_gesture_model.pth', map_location=device))
     dynamic_model.to(device)
     dynamic_model.eval()
 
@@ -108,8 +108,7 @@ def recognize_gestures():
 
                 # Decide which gesture to prioritize
                 if dynamic_gesture and \
-                    dynamic_confidence_val > static_confidence_val and \
-                        dynamic_gesture not in ["not_moving", "moving_slowly"]:
+                    dynamic_gesture not in ["not_moving", "moving_slowly"]:
                     
                     gesture = dynamic_gesture
                     confidence = dynamic_confidence_val
@@ -118,8 +117,8 @@ def recognize_gestures():
                     gesture = static_gesture
                     confidence = static_confidence_val
 
-                # gesture = static_gesture
-                # confidence = static_confidence_val
+                gesture = static_gesture
+                confidence = static_confidence_val
 
                 # Map gesture to command
                 if confidence > 0.6:  # Confidence threshold

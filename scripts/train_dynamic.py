@@ -8,7 +8,7 @@ import os
 import json
 import numpy as np
 from tqdm import tqdm
-from models.gesture_classes import static, dynamic
+from models.GestureClasses import static, dynamic
 
 
 class DynamicGestureDataset(Dataset):
@@ -141,7 +141,7 @@ def train_dynamic_gesture_model():
             best_val_acc = val_epoch_acc
             epochs_without_improvement = 0  # Reset counter
             # Save the best model
-            torch.save(model.state_dict(), 'models/dynamic_gesture_model.pth')
+            torch.save(model.state_dict(), 'models/parameters/dynamic_gesture_model.pth')
             print(f'Best model saved with Val Acc: {best_val_acc:.2f}%')
         else:
             epochs_without_improvement += 1
@@ -152,7 +152,7 @@ def train_dynamic_gesture_model():
             break
     
     # Load the best model and evaluate
-    model.load_state_dict(torch.load('models/dynamic_gesture_model.pth'))
+    model.load_state_dict(torch.load('models/parameters/dynamic_gesture_model.pth'))
     model.to(device)
     train_acc = evaluate(model, train_loader, device)
     
