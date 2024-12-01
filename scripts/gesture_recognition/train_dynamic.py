@@ -62,7 +62,7 @@ def train_dynamic_gesture_model():
     num_layers = 2
     patience = 20  # Early stopping patience
 
-    train_data, val_data, test_data = split_data(static_dir, dynamic)
+    train_data, val_data, test_data = split_data(static_dir, dynamic, ".json")
     
     # Datasets and Dataloaders
     transform = None

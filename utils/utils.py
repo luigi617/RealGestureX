@@ -28,22 +28,23 @@ def preprocess_landmarks(landmarks):
     return landmarks
 
 
-def split_data(dir, classes):
+def split_data(dir, classes, filetypes):
     train_dir = {}
     val_dir = {}
     test_dir = {}
-    for cls in classes:
+    for i, cls in enumerate(classes):
         cls_dir = os.path.join(dir, cls)
         if not os.path.isdir(cls_dir): continue
-        json_files = [os.path.join(cls_dir, f) for f in os.listdir(cls_dir) if f.endswith('.json')]
-        random.shuffle(json_files)
-        n = len(json_files)
+        filetype = filetypes if isinstance(filetypes, str) else filetypes[i]
+        files = [os.path.join(cls_dir, f) for f in os.listdir(cls_dir) if f.endswith(filetype)]
+        random.shuffle(files)
+        n = len(files)
         split_1 = int(0.8 * n)
         split_2 = split_1 + int(0.1 * n)
 
-        train_dir[cls] = json_files[:split_1]
-        val_dir[cls] = json_files[split_1:split_2]
-        test_dir[cls] = json_files[split_2:]
+        train_dir[cls] = files[:split_1]
+        val_dir[cls] = files[split_1:split_2]
+        test_dir[cls] = files[split_2:]
     
     return train_dir, val_dir, test_dir
 
@@ -60,6 +61,30 @@ def evaluate(model, dataloader, device):
             correct += (predicted == labels).sum().item()
     accuracy = 100 * correct / total
     return accuracy
+
+
+def calculate_iou(pred_bbox, true_bbox):
+    x_min_pred, y_min_pred, x_max_pred, y_max_pred = pred_bbox
+    x_min_true, y_min_true, x_max_true, y_max_true = true_bbox
+
+    # Calculate intersection area
+    inter_x_min = max(x_min_pred, x_min_true)
+    inter_y_min = max(y_min_pred, y_min_true)
+    inter_x_max = min(x_max_pred, x_max_true)
+    inter_y_max = min(y_max_pred, y_max_true)
+    
+    inter_area = max(0, inter_x_max - inter_x_min) * max(0, inter_y_max - inter_y_min)
+    
+    # Calculate union area
+    pred_area = (x_max_pred - x_min_pred) * (y_max_pred - y_min_pred)
+    true_area = (x_max_true - x_min_true) * (y_max_true - y_min_true)
+    union_area = pred_area + true_area - inter_area
+    
+    # Calculate IoU
+    iou = inter_area / union_area if union_area != 0 else 0
+    return iou
+def calculate_mae(pred_landmarks, true_landmarks):
+    return torch.mean(torch.abs(pred_landmarks - true_landmarks))
 
 def map_gesture_to_command(gesture):
     """

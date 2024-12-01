@@ -56,7 +56,7 @@ def train_static_gesture_model():
     num_classes = len(static)
     patience = 20  # Early stopping patience
     
-    train_data, val_data, test_data = split_data(static_dir, static)
+    train_data, val_data, test_data = split_data(static_dir, static, ".json")
     
     # Datasets and Dataloaders
     transform = None
