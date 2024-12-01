@@ -163,7 +163,7 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
 
-hand_landmark_model = HandLandmarkModel().to(device)
+hand_landmark_model = HandLandmarkModel(input_size=(320,320)).to(device)
 landmark_criterion = nn.MSELoss()
 landmark_optimizer = optim.Adam(hand_landmark_model.parameters(), lr=0.001)
 
