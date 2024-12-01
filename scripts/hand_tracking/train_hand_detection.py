@@ -93,6 +93,8 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
             loss = criterion(outputs, bbox)
             loss.backward()
             optimizer.step()
+            torch.cuda.empty_cache()
+
             running_loss += loss.item()
 
             # Calculate IoU for each prediction in the batch
@@ -163,6 +165,8 @@ def train_landmark_detection(model, train_loader, val_loader, criterion, optimiz
             loss = criterion(outputs, landmarks)
             loss.backward()
             optimizer.step()
+            torch.cuda.empty_cache()
+
             running_loss += loss.item()
 
             # Calculate accuracy for landmarks (Mean Absolute Error)
