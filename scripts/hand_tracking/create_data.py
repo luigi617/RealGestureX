@@ -45,6 +45,7 @@ def save_data(frame, hand_data, index):
     os.makedirs('hand_tracking_dataset/image', exist_ok=True)
     os.makedirs('hand_tracking_dataset/hand', exist_ok=True)
     os.makedirs('hand_tracking_dataset/landmark', exist_ok=True)
+    os.makedirs('hand_tracking_dataset/cropped_image', exist_ok=True)
 
     # Save the original frame
     image_filename = f'hand_tracking_dataset/image/frame_{index}.jpg'
