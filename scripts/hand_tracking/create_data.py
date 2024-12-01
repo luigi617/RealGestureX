@@ -53,10 +53,10 @@ def save_data(frame, hand_data, index):
 
     for hand in hand_data:
 
-        x_min, y_min, x_max, y_max = hand['bbox']
-        hand_crop = frame[y_min:y_max, x_min:x_max]
-        hand_image_filename = f'hand_tracking_dataset/cropped_image/hand_{index}.jpg'
-        cv2.imwrite(hand_image_filename, hand_crop)
+        # x_min, y_min, x_max, y_max = hand['bbox']
+        # hand_crop = frame[y_min:y_max, x_min:x_max]
+        # hand_image_filename = f'hand_tracking_dataset/cropped_image/hand_{index}.jpg'
+        # cv2.imwrite(hand_image_filename, hand_crop)
 
         # Save the hand landmarks to a JSON file
         landmarks_filename = f'hand_tracking_dataset/landmark/hand_{index}.json'
@@ -93,11 +93,8 @@ while cap.isOpened():
     # frame = cv2.resize(frame, (800, 800))
     frame = resize_with_aspect_ratio(frame, target_width=800)
 
-
-
     # Extract hand bounding boxes and landmarks
     hand_data = extract_hand_bbox_and_landmarks(frame)
-    print(hand_data)
     
     if hand_data:
         # Save the image, hand crops, and landmarks
