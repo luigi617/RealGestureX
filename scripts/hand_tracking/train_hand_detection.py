@@ -83,7 +83,7 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
         total_samples = 0
         loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
         for images, _, bboxes, _ in loop:
-            images = images.to(device)  # Move images to GPU
+            images = list(image.to(device) for image in images)
             bboxes = bboxes.to(device)  # Move bounding boxes to GPU
 
             optimizer.zero_grad()
@@ -95,10 +95,9 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
                 }
                 targets.append(target)
             targets = [{k: v.to(device) for k, v in target.items()} for target in targets]
-            outputs = model(images, targets)  # Predicted bounding boxes
+            outputs = model(images, targets)
             
-            # Calculate loss (using MSE loss or other loss)
-            loss = criterion(outputs, bboxes)
+            loss = sum(loss for loss in outputs.values())
             loss.backward()
             optimizer.step()
             torch.cuda.empty_cache()
@@ -107,7 +106,7 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
 
             # Calculate IoU for each prediction in the batch
             batch_iou = 0.0
-            for pred_bbox, true_bbox in zip(outputs, bboxes):
+            for pred_bbox, true_bbox in zip(outputs["boxes"], bboxes):
                 iou = calculate_iou(pred_bbox.detach().cpu().numpy(), true_bbox.detach().cpu().numpy())
                 batch_iou += iou
             total_iou_train += batch_iou
@@ -125,7 +124,7 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
         with torch.no_grad():
             loop = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
             for images, _, bboxes, _ in loop:
-                images = images.to(device)  # Move images to GPU
+                images = list(image.to(device) for image in images)
                 bboxes = bboxes.to(device)  # Move bounding boxes to GPU
                 targets = []
                 for bbox in bboxes:
@@ -136,12 +135,12 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
                     targets.append(target)
                 targets = [{k: v.to(device) for k, v in target.items()} for target in targets]
                 outputs = model(images, targets)  # Predicted bounding boxes
-                loss = criterion(outputs, bboxes)
+                loss = sum(loss for loss in outputs.values())
                 val_loss += loss.item()
 
                 # Calculate IoU for validation batch
                 batch_iou = 0.0
-                for pred_bbox, true_bbox in zip(outputs, bboxes):
+                for pred_bbox, true_bbox in zip(outputs['boxes'], bboxes):
                     iou = calculate_iou(pred_bbox.detach().cpu().numpy(), true_bbox.detach().cpu().numpy())
                     batch_iou += iou
                 total_iou_val += batch_iou
