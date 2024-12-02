@@ -91,6 +91,7 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
             for bbox in bboxes:
                 target = {
                     'boxes': bbox.unsqueeze(0).to(device),
+                    'labels': torch.tensor([1], dtype=torch.int64).to(device)
                 }
                 targets.append(target)
             outputs = model(images, targets)  # Predicted bounding boxes
@@ -128,11 +129,11 @@ def train_hand_detection(model, train_loader, val_loader, criterion, optimizer, 
                 targets = []
                 for bbox in bboxes:
                     target = {
-                        'boxes': bbox.unsqueeze(0).to(device),  # Bounding box in format [x_min, y_min, x_max, y_max]
+                        'boxes': bbox.unsqueeze(0),  # Bounding box in format [x_min, y_min, x_max, y_max]
                         'labels': torch.tensor([1], dtype=torch.int64).to(device)  # Hand class label
                     }
                     targets.append(target)
-
+                targets = [{k: v.to(device) for k, v in target.items()} for target in targets]
                 outputs = model(images, targets)  # Predicted bounding boxes
                 loss = criterion(outputs, bboxes)
                 val_loss += loss.item()
