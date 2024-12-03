@@ -64,36 +64,6 @@ def evaluate(model, dataloader, device):
     return accuracy
 
 
-def compute_average_iou(pred_boxes, gt_boxes):
-    """
-    Computes the average IoU for a batch of predicted and ground truth boxes.
-    
-    Args:
-        pred_boxes (List[Tensor]): List of tensors containing predicted boxes for each image.
-        gt_boxes (List[Tensor]): List of tensors containing ground truth boxes for each image.
-        
-    Returns:
-        float: Average IoU over the batch.
-    """
-    total_iou = 0.0
-    count = 0
-
-    for preds, gts in zip(pred_boxes, gt_boxes):
-        if preds.numel() == 0 or gts.numel() == 0:
-            continue  # Skip if no predictions or ground truths
-        
-        # Compute IoU between predicted boxes and ground truth boxes
-        iou = box_iou(preds, gts)  # Shape: [num_preds, num_gts]
-        
-        # For each ground truth box, find the maximum IoU with any predicted box
-        max_iou, _ = iou.max(dim=0)  # Shape: [num_gts]
-        
-        total_iou += max_iou.sum().item()
-        count += max_iou.numel()
-    
-    if count == 0:
-        return 0.0
-    return total_iou / count
 
 
 def calculate_mae(pred_landmarks, true_landmarks):
