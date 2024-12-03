@@ -10,10 +10,12 @@ from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
 import torchvision
+from torchvision.ops import box_iou
 
 from models.HandDetectionModel import HandDetectionModel
 from models.HandLandmarkTrackingModel import HandLandmarkModel
-from utils.utils import calculate_iou, calculate_mae, split_data
+from utils.utils import calculate_mae, compute_average_iou, split_data
+
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -60,6 +62,7 @@ def train_hand_detection(model, train_loader, val_loader, optimizer, num_epochs=
     model.train()
     best_val_loss = float('inf')
     patience_counter = 0
+
     for epoch in range(num_epochs):
         running_loss = 0.0
         loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
@@ -70,45 +73,66 @@ def train_hand_detection(model, train_loader, val_loader, optimizer, num_epochs=
             optimizer.zero_grad()
 
             outputs = model(images, targets)
-            
+            print(outputs.keys())
             loss = sum(loss for loss in outputs.values())
             loss.backward()
             optimizer.step()
             torch.cuda.empty_cache()
 
             running_loss += loss.item()
-
+        
         avg_train_loss = running_loss / len(train_loader)
         print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_train_loss:.4f}")
 
         # Validation Loss and IoU Metric
         val_loss = 0.0
+        all_pred_boxes = []
+        all_gt_boxes = []
         model.eval()
         with torch.no_grad():
-            loop = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
+            loop = tqdm(val_loader, desc=f'Validation Epoch {epoch+1}/{num_epochs}', leave=False)
             for images, targets in loop:
                 images = list(image.to(device) for image in images)
                 targets = [{k: v.to(device) for k, v in target.items()} for target in targets]
 
+                # Compute validation loss
                 outputs = model(images, targets)
+                print(outputs.keys())
                 loss = sum(loss for loss in outputs.values())
                 val_loss += loss.item()
 
+                # Perform inference to get predictions
+                detections = model(images)  # Outputs without targets
+
+                for det, tgt in zip(detections, targets):
+                    pred_boxes = det['boxes'].cpu()
+                    # Filter out predictions with low scores if necessary
+                    # e.g., pred_boxes = pred_boxes[det['scores'] > 0.5]
+                    all_pred_boxes.append(pred_boxes)
+                    gt_boxes = tgt['boxes'].cpu()
+                    all_gt_boxes.append(gt_boxes)
 
         avg_val_loss = val_loss / len(val_loader)
-        print(f"Epoch [{epoch+1}/{num_epochs}], Val Loss: {avg_val_loss:.4f}")
+        avg_iou = compute_average_iou(all_pred_boxes, all_gt_boxes)
+        print(f"Epoch [{epoch+1}/{num_epochs}], Val Loss: {avg_val_loss:.4f}, Val IoU: {avg_iou:.4f}")
 
         # Early stopping based on validation loss
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0  # Reset patience counter if validation loss improves
             torch.save(model.state_dict(), 'models/parameters/hand_detection_model.pth')
+            print(f"Model saved at epoch {epoch+1}")
         else:
             patience_counter += 1
         
         if patience_counter >= patience:
             print(f"Early stopping at epoch {epoch+1}")
             break
+
+        model.train()  # Switch back to training mode
+
+    print("Training completed!")
+
 
 def collate_fn(batch):
     return tuple(zip(*batch))

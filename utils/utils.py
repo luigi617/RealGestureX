@@ -4,6 +4,7 @@ import os
 import random
 import numpy as np
 import torch
+from torchvision.ops import box_iou
 
 def preprocess_landmarks(landmarks):
     """
@@ -63,26 +64,37 @@ def evaluate(model, dataloader, device):
     return accuracy
 
 
-def calculate_iou(pred_bbox, true_bbox):
-    x_min_pred, y_min_pred, x_max_pred, y_max_pred = pred_bbox
-    x_min_true, y_min_true, x_max_true, y_max_true = true_bbox
+def compute_average_iou(pred_boxes, gt_boxes):
+    """
+    Computes the average IoU for a batch of predicted and ground truth boxes.
+    
+    Args:
+        pred_boxes (List[Tensor]): List of tensors containing predicted boxes for each image.
+        gt_boxes (List[Tensor]): List of tensors containing ground truth boxes for each image.
+        
+    Returns:
+        float: Average IoU over the batch.
+    """
+    total_iou = 0.0
+    count = 0
 
-    # Calculate intersection area
-    inter_x_min = max(x_min_pred, x_min_true)
-    inter_y_min = max(y_min_pred, y_min_true)
-    inter_x_max = min(x_max_pred, x_max_true)
-    inter_y_max = min(y_max_pred, y_max_true)
+    for preds, gts in zip(pred_boxes, gt_boxes):
+        if preds.numel() == 0 or gts.numel() == 0:
+            continue  # Skip if no predictions or ground truths
+        
+        # Compute IoU between predicted boxes and ground truth boxes
+        iou = box_iou(preds, gts)  # Shape: [num_preds, num_gts]
+        
+        # For each ground truth box, find the maximum IoU with any predicted box
+        max_iou, _ = iou.max(dim=0)  # Shape: [num_gts]
+        
+        total_iou += max_iou.sum().item()
+        count += max_iou.numel()
     
-    inter_area = max(0, inter_x_max - inter_x_min) * max(0, inter_y_max - inter_y_min)
-    
-    # Calculate union area
-    pred_area = (x_max_pred - x_min_pred) * (y_max_pred - y_min_pred)
-    true_area = (x_max_true - x_min_true) * (y_max_true - y_min_true)
-    union_area = pred_area + true_area - inter_area
-    
-    # Calculate IoU
-    iou = inter_area / union_area if union_area != 0 else 0
-    return iou
+    if count == 0:
+        return 0.0
+    return total_iou / count
+
 
 def calculate_mae(pred_landmarks, true_landmarks):
     return torch.mean(torch.abs(pred_landmarks - true_landmarks))
