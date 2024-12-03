@@ -110,6 +110,10 @@ def train_hand_detection(model, train_loader, val_loader, optimizer, num_epochs=
             print(f"Early stopping at epoch {epoch+1}")
             break
 
+def collate_fn(batch):
+    return tuple(zip(*batch))
+
+
 image_transform = transforms.Compose([
     transforms.Resize((320, 320)),      # Resize image to 128x128
     transforms.ToTensor(),              # Convert to Tensor
@@ -132,17 +136,18 @@ val_dataset = HandDetectionDataset(data_dir=val_data, image_transform=image_tran
 test_dataset = HandDetectionDataset(data_dir=test_data, image_transform=image_transform)
 
 # Create DataLoader
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
 
 
 hand_detection_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-hand_detection_model.to(device)
 num_classes = 2  # Background + hand
 in_features = hand_detection_model.roi_heads.box_predictor.cls_score.in_features
 hand_detection_model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes)
+hand_detection_model.to(device)
+
 params = [p for p in hand_detection_model.parameters() if p.requires_grad]
 optimizer = optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
 
