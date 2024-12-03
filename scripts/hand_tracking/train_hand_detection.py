@@ -14,7 +14,7 @@ from torchvision.ops import box_iou
 
 from models.HandDetectionModel import HandDetectionModel
 from models.HandLandmarkTrackingModel import HandLandmarkModel
-from utils.utils import calculate_mae, compute_average_iou, split_data
+from utils.utils import *
 
 
 
@@ -73,7 +73,6 @@ def train_hand_detection(model, train_loader, val_loader, optimizer, num_epochs=
             optimizer.zero_grad()
 
             outputs = model(images, targets)
-            print(outputs.keys())
             loss = sum(loss for loss in outputs.values())
             loss.backward()
             optimizer.step()
@@ -84,11 +83,7 @@ def train_hand_detection(model, train_loader, val_loader, optimizer, num_epochs=
         avg_train_loss = running_loss / len(train_loader)
         print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_train_loss:.4f}")
 
-        # Validation Loss and IoU Metric
         val_loss = 0.0
-        all_pred_boxes = []
-        all_gt_boxes = []
-        model.eval()
         with torch.no_grad():
             loop = tqdm(val_loader, desc=f'Validation Epoch {epoch+1}/{num_epochs}', leave=False)
             for images, targets in loop:
@@ -97,24 +92,14 @@ def train_hand_detection(model, train_loader, val_loader, optimizer, num_epochs=
 
                 # Compute validation loss
                 outputs = model(images, targets)
-                print(outputs.keys())
                 loss = sum(loss for loss in outputs.values())
                 val_loss += loss.item()
 
                 # Perform inference to get predictions
-                detections = model(images)  # Outputs without targets
-
-                for det, tgt in zip(detections, targets):
-                    pred_boxes = det['boxes'].cpu()
-                    # Filter out predictions with low scores if necessary
-                    # e.g., pred_boxes = pred_boxes[det['scores'] > 0.5]
-                    all_pred_boxes.append(pred_boxes)
-                    gt_boxes = tgt['boxes'].cpu()
-                    all_gt_boxes.append(gt_boxes)
+            
 
         avg_val_loss = val_loss / len(val_loader)
-        avg_iou = compute_average_iou(all_pred_boxes, all_gt_boxes)
-        print(f"Epoch [{epoch+1}/{num_epochs}], Val Loss: {avg_val_loss:.4f}, Val IoU: {avg_iou:.4f}")
+        print(f"Epoch [{epoch+1}/{num_epochs}], Val Loss: {avg_val_loss:.4f}")
 
         # Early stopping based on validation loss
         if avg_val_loss < best_val_loss:
@@ -151,7 +136,7 @@ data_dir= 'hand_tracking_dataset'
 num_epochs = 1000
 batch_size = 16
 learning_rate = 1e-3
-patience = 20  # Early stopping patience
+patience = 10  # Early stopping patience
 
 train_data, val_data, test_data = split_data(data_dir, ["image", "hand", "landmark"], [".jpg", ".txt", ".json"])
 # Instantiate dataset
