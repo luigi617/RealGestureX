@@ -1,10 +1,6 @@
 import cv2
 import mediapipe as mp
 import os
-import json
-import time
-from collections import deque
-import numpy as np
 import re
 
 # Initialize MediaPipe Hands
@@ -13,6 +9,7 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_c
 mp_drawing = mp.solutions.drawing_utils
 
 p = "val"
+p = "train"
 # Change this path to your desired directory structure
 yolo_dataset_path = "yolo_dataset"
 yolo_images_base = os.path.join(yolo_dataset_path, "images", p)
