@@ -25,7 +25,7 @@ def main():
 
         # Validate model
         val_metrics = model.val()
-        current_mAP = val_metrics['metrics']['mAP']
+        current_mAP = val_metrics.box.map
 
         # Check for improvement
         if current_mAP > best_mAP:
@@ -45,10 +45,11 @@ def main():
     
     # Print final validation metrics with formatting
     print("Final validation metrics:")
-    print(f"mAP: {validation_metrics['metrics']['mAP']:.4f}")
-    print(f"Precision: {validation_metrics['metrics']['precision']:.4f}")
-    print(f"Recall: {validation_metrics['metrics']['recall']:.4f}")
-    print(f"F1-score: {validation_metrics['metrics']['f1']:.4f}")
+    print(f"mAP: {validation_metrics.box.map:.4f}")
+    print(f"Precision: {validation_metrics.box.precision:.4f}")
+    print(f"Recall: {validation_metrics.box.recall:.4f}")
+    print(f"F1-score: {validation_metrics.box.f1:.4f}")
+
 
 if __name__ == "__main__":
     main()
