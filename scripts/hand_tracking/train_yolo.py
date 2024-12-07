@@ -11,29 +11,34 @@ def main():
     model = YOLO(pretrained_weights)
     
     # Training hyperparameters
-    epochs = 50
     img_size = 640
     batch_size = 16
     
-    # Define the EarlyStopping callback
-    early_stop_callback = EarlyStopping(
-        monitor='val/mAP',    # Metric to monitor; ensure this matches the validation metric name
-        patience=10,           # Number of epochs to wait for improvement
-        verbose=True,         # Enable verbose logging
-        mode='max'            # 'max' since higher mAP is better
-    )
-    
-    # Train the model with early stopping
-    results = model.train(
-        data=dataset_yaml,
-        epochs=epochs,
-        imgsz=img_size,
-        batch=batch_size,
-        project="models/runs",
-        name="exp_hand_detection",
-        exist_ok=True,
-        callbacks=[early_stop_callback]  # Include the EarlyStopping callback
-    )
+    best_mAP = 0
+    wait = 0
+    patience = 10
+    max_epochs = 1000
+
+    for epoch in range(max_epochs):
+        # Train for one epoch
+        model.train(data="data.yaml", epochs=1, imgsz=img_size, batch=batch_size)
+
+        # Validate model
+        val_metrics = model.val()
+        current_mAP = val_metrics['metrics']['mAP']
+
+        # Check for improvement
+        if current_mAP > best_mAP:
+            best_mAP = current_mAP
+            wait = 0
+            # Optionally save the best model if needed
+            model.export(format="pt", path="best.pt")
+        else:
+            wait += 1
+            if wait >= patience:
+                print("Early stopping triggered.")
+                break
+
     
     # Validate the model after training
     validation_metrics = model.val()
