@@ -21,7 +21,7 @@ def main():
 
     for epoch in range(max_epochs):
         # Train for one epoch
-        model.train(data="data.yaml", epochs=1, imgsz=img_size, batch=batch_size)
+        model.train(data=dataset_yaml, epochs=1, imgsz=img_size, batch=batch_size)
 
         # Validate model
         val_metrics = model.val()
@@ -32,7 +32,7 @@ def main():
             best_mAP = current_mAP
             wait = 0
             # Optionally save the best model if needed
-            model.export(format="pt", path="best.pt")
+            model.export(format="pt", path="models/parameters/hand_tracking_model.pt")
         else:
             wait += 1
             if wait >= patience:
