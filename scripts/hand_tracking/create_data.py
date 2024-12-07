@@ -125,7 +125,7 @@ while cap.isOpened():
         detections = save_yolo_data(frame, hand_data[0], True)
         # frame = draw_yolo_boxes(frame, detections)
     else:
-        save_negative_sample()
+        save_negative_sample(frame, True)
 
     key = cv2.waitKey(10) & 0xFF
     if key == ord('q'):
