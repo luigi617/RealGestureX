@@ -55,6 +55,7 @@ def main():
                 # Save the best model's state_dict as a .pth file
                 torch.save(model.model.state_dict(), model_save_path)
                 print(f"New best mAP: {best_mAP:.4f}. Model saved to {model_save_path}.")
+                
             else:
                 wait += 1
                 print(f"No improvement. Wait count: {wait}/{patience}")
