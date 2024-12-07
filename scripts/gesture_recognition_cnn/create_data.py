@@ -18,7 +18,7 @@ mp_drawing = mp.solutions.drawing_utils
 
 
 
-is_static = True
+is_static = False
 
 
 if is_static:
@@ -55,11 +55,11 @@ def extract_hand_bbox(result):
 
     return box
 
-def save_cropped_image(gesture_name, frame, box):
-    x_min, y_min, x_max, y_max = box
-    cropped_image = frame[y_min:y_max, x_min:x_max]
+def save_cropped_image(gesture_name, cropped_image, further_dir = None):
     gesture_dir = os.path.join(dataset_path, gesture_name)
-
+    if further_dir:
+        gesture_dir = os.path.join(gesture_dir, further_dir)
+    os.makedirs(gesture_dir, exist_ok=True)
     files = os.listdir(gesture_dir)
     number_pattern = re.compile(r'(\d+)')
     max_number = -1
@@ -100,19 +100,18 @@ while cap.isOpened():
         cv2.putText(frame, f"Current Gesture: {current_gesture}, buffer length: {len(buffer)}/{sequence_length}", (10, 90), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            landmarks = []
-
-            for lm in hand_landmarks.landmark:
-                landmarks.append([lm.x, lm.y, lm.z])
-            
-            if len(buffer) < sequence_length:
-                buffer.append(landmarks)
+    # if results.multi_hand_landmarks:
+    #     pass
+        # for hand_landmarks in results.multi_hand_landmarks:
             
             # mp.solutions.drawing_utils.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
     
     hand_data = extract_hand_bbox(results)
+    if hand_data:
+        x_min, y_min, x_max, y_max = hand_data[0]
+        cropped_frame = frame[y_min:y_max, x_min:x_max].copy()
+        if len(buffer) < sequence_length:
+            buffer.append(cropped_frame)
     # if hand_data:
     #     for hand in hand_data:
     #         x_min, y_min, x_max, y_max = hand
@@ -136,10 +135,22 @@ while cap.isOpened():
     elif key == ord('s'):  # Save sequence
         pass
         if current_gesture in dynamic and len(buffer) == sequence_length:
-            pass
+            latest_frames = buffer
+            gesture_dir = os.path.join(dataset_path, current_gesture)
+            files = os.listdir(gesture_dir)
+            number_pattern = re.compile(r'(\d+)')
+            max_number = -1
+            for file in files:
+                match = number_pattern.search(file)
+                if match:
+                    max_number = max(max_number, int(match.group(1)))
+
+            for f in latest_frames:
+                save_cropped_image(current_gesture, f, str(max_number+1))
+            buffer.clear()
         elif current_gesture in static and len(buffer) > 0:
-            sequence_data = [list(buffer)[-1]]
-            save_cropped_image(current_gesture, frame, hand_data[0])
+            latest_frame = buffer[-1]
+            save_cropped_image(current_gesture, latest_frame)
             buffer.clear()
 
 cap.release()
