@@ -23,10 +23,10 @@ is_static = False
 
 if is_static:
     gestures = static
-    dataset_path = "gesture_dataset_cnn/static"
+    dataset_path = "datasets/gesture_dataset_cnn/static"
 else:
     gestures = dynamic
-    dataset_path = "gesture_dataset_cnn/dynamic"
+    dataset_path = "datasets/gesture_dataset_cnn/dynamic"
 
 for gesture in gestures:
     os.makedirs(os.path.join(dataset_path, gesture), exist_ok=True)

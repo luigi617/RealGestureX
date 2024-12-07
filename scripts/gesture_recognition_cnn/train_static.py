@@ -46,7 +46,7 @@ class StaticGestureDataset(Dataset):
 
 def train_static_gesture_model():
     # Paths
-    static_dir = os.getcwd() + '/gesture_dataset_cnn/static'
+    static_dir = os.getcwd() + '/datasets/gesture_dataset_cnn/static'
     
     # Hyperparameters
     num_epochs = 1000

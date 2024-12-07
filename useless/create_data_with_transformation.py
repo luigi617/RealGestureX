@@ -15,7 +15,7 @@ gestures = ["swipe_up", "swipe_down", "swipe_left", "swipe_right",
 
 dynamic = ["swipe_up", "swipe_down", "swipe_left", "swipe_right"]
 static = ["pointing", "open_palm", "thumb_index_touch", "fist"]
-dataset_path = "gesture_dataset/static/val"
+dataset_path = "datasets/gesture_dataset/static/val"
 
 for gesture in gestures:
     os.makedirs(os.path.join(dataset_path, gesture), exist_ok=True)

@@ -51,7 +51,7 @@ class DynamicGestureDataset(Dataset):
 
 def train_dynamic_gesture_model():
     # Paths
-    static_dir = os.getcwd() + '/gesture_dataset/dynamic'
+    static_dir = os.getcwd() + '/datasets/gesture_dataset/dynamic'
     
     # Hyperparameters
     num_epochs = 1000
