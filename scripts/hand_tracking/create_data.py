@@ -9,9 +9,9 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_c
 mp_drawing = mp.solutions.drawing_utils
 
 p = "val"
-# p = "train"
+p = "train"
 # Change this path to your desired directory structure
-yolo_dataset_path = "yolo_dataset"
+yolo_dataset_path = "datasets/yolo_dataset"
 yolo_images_base = os.path.join(yolo_dataset_path, "images", p)
 yolo_labels_base = os.path.join(yolo_dataset_path, "labels", p)
 
@@ -35,10 +35,6 @@ def extract_hand_bbox(result, frame):
     return box
 
 def save_yolo_data(frame, box, save=True):
-    """
-    Save the original frame and corresponding YOLO label file.
-    boxes: list of [x_min, y_min, x_max, y_max]
-    """
     files = os.listdir(yolo_images_base)
     number_pattern = re.compile(r'(\d+)')
     max_number = -1
@@ -68,6 +64,23 @@ def save_yolo_data(frame, box, save=True):
             f.write(f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
     return x_center, y_center, width, height
 
+def save_negative_sample(frame, save=True):
+    files = os.listdir(yolo_images_base)
+    number_pattern = re.compile(r'(\d+)')
+    max_number = -1
+    for file in files:
+        if file.endswith('.jpg'):
+            match = number_pattern.search(file)
+            if match:
+                number = int(match.group(1))
+                max_number = max(max_number, number)
+    index = max_number+1
+
+    image_filename = f"{index}.jpg"
+    image_path = os.path.join(yolo_images_base, image_filename)
+    if save:
+        cv2.imwrite(image_path, frame)
+
 def draw_yolo_boxes(frame, detection, color=(0, 255, 0), thickness=2):
 
     img_height, img_width = frame.shape[:2]
@@ -90,7 +103,6 @@ def draw_yolo_boxes(frame, detection, color=(0, 255, 0), thickness=2):
     x_max = min(img_width - 1, x_max)
     y_max = min(img_height - 1, y_max)
 
-    print((x_min, y_min), (x_max, y_max))
     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), color, thickness)
 
     return frame
@@ -110,7 +122,9 @@ while cap.isOpened():
     hand_data = extract_hand_bbox(results, frame)
     if hand_data:
         detections = save_yolo_data(frame, hand_data[0], True)
-        frame = draw_yolo_boxes(frame, detections)
+        # frame = draw_yolo_boxes(frame, detections)
+    else:
+        save_negative_sample()
 
     key = cv2.waitKey(10) & 0xFF
     if key == ord('q'):
