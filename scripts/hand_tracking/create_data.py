@@ -105,6 +105,7 @@ def draw_yolo_boxes(frame, detection, color=(0, 255, 0), thickness=2):
 
     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), color, thickness)
 
+
     return frame
 
 cap = cv2.VideoCapture(2)
