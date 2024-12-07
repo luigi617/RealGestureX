@@ -8,8 +8,8 @@ mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.7)
 mp_drawing = mp.solutions.drawing_utils
 
-p = "val"
-# p = "train"
+# p = "val"
+p = "train"
 # Change this path to your desired directory structure
 yolo_dataset_path = "datasets/yolo_dataset"
 yolo_images_base = os.path.join(yolo_dataset_path, "images", p)
