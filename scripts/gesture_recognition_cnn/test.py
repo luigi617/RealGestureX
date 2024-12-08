@@ -66,6 +66,8 @@ def plot_confusion_matrix(y_true, y_pred, class_names):
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.show()
+    plt.savefig('cm.jpg')
+
 
 def evaluate_and_get_predictions(model, data_loader, device):
     model.eval()
