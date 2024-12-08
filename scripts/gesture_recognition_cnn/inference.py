@@ -68,6 +68,8 @@ def recognize_gestures():
 
     sequence_length = 15  # Number of frames to consider for dynamic gestures
     buffer = deque(maxlen=sequence_length)
+    last_dynamic_gesture = (None, 0.0)
+    last_static_gesture = (None, 0.0)
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -81,7 +83,7 @@ def recognize_gestures():
         curr_time = time.time()
         fps = 1 / (curr_time - prev_time) if (curr_time - prev_time) > 0 else 0
         prev_time = curr_time
-        cv2.putText(frame, f'FPS: {int(fps)}', (10, 70),
+        cv2.putText(frame, f'FPS: {int(fps)}', (10, 150),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         
         results = hands.process(frame_rgb)
@@ -120,32 +122,34 @@ def recognize_gestures():
                     dynamic_confidence_val, dynamic_pred = torch.max(dynamic_probs, 1)
                     dynamic_gesture = dynamic[dynamic_pred.item()]
                     dynamic_confidence_val = dynamic_confidence_val.item()
-
+            
+            gesture = None
+            confidence = 0.0
             if dynamic_gesture and dynamic_gesture not in ["not_moving", "moving_slowly"]:
                 gesture = dynamic_gesture
                 confidence = dynamic_confidence_val
                 buffer.clear()
+                last_dynamic_gesture = (dynamic_gesture, dynamic_confidence_val)
             else:
                 gesture = static_gesture
                 confidence = static_confidence_val
+                last_static_gesture = (dynamic_gesture, dynamic_confidence_val)
 
             gesture = static_gesture
             confidence = static_confidence_val
 
+            cv2.putText(frame, f'Gesture: {gesture} ({confidence*100:.1f}%)', (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, f'Last Dyanmic Gesture: {last_dynamic_gesture[0]} ({last_dynamic_gesture[1]*100:.1f}%)',
+                        (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, f'Last Static Gesture: {last_static_gesture[0]} ({last_static_gesture[1]*100:.1f}%)',
+                        (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
             if confidence > 0.6:
                 command = map_gesture_to_command(gesture)
-                cv2.putText(frame, f'Gesture: {gesture} ({confidence*100:.1f}%)', (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-            else:
-                cv2.putText(frame, f'Gesture: None', (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
-
-            
-        # Display the resulting frame
         cv2.imshow('Gesture Recognition', frame)
 
-        # Press 'q' to exit
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 

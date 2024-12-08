@@ -15,8 +15,8 @@ class DynamicGestureDataset(Dataset):
     def __init__(self, data_dir: dict, transform=None, sequence_length=15):
         self.sequence_length = sequence_length
         self.transform = transform
-        self.classes = list(data_dir.keys())
-        self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
+        self.classes = dynamic
+        self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(dynamic)}
         self.samples = []
         
         for cls in self.classes:
@@ -40,6 +40,7 @@ class DynamicGestureDataset(Dataset):
             if image is None:
                 raise FileNotFoundError(f"Image not found: {img_path}")
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
             if self.transform:
                 image = self.transform(image)
             else:
@@ -53,13 +54,14 @@ def train_dynamic_gesture_model():
     dynamic_dir = os.path.join(os.getcwd(), 'datasets', 'gesture_dataset_cnn', 'dynamic')
     
     num_epochs = 1000
-    batch_size = 8
+    batch_size = 16
     learning_rate = 1e-3
     patience = 20
     
     num_classes = len(dynamic)
     
     train_data, val_data, test_data = split_dynamic_data(dynamic_dir, dynamic, ".jpg")
+
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((128, 128)), 
@@ -84,7 +86,7 @@ def train_dynamic_gesture_model():
     
     model = DynamicGestureCNNModel(
         num_classes=num_classes,
-        hidden_size=64,
+        hidden_size=256,
         num_layers=2,
         bidirectional=True,
         freeze_cnn=True

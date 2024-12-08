@@ -16,8 +16,8 @@ class StaticGestureDataset(Dataset):
         self.image_paths = []
         self.labels = []
         self.transform = transform
-        self.classes = list(data_dir.keys())
-        self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
+        self.classes = static
+        self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(static)}
         for cls in self.classes:
             for image_path in data_dir[cls]:
                 self.image_paths.append(image_path)
