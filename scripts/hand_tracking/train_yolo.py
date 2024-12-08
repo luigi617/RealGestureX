@@ -29,13 +29,6 @@ def main():
     
     # Validate the model after training
     validation_metrics = model.val()
-    
-    # Print final validation metrics with formatting
-    print("Final validation metrics:")
-    print(f"mAP: {validation_metrics.box.map:.4f}")
-    print(f"Precision: {validation_metrics.box.precision:.4f}")
-    print(f"Recall: {validation_metrics.box.recall:.4f}")
-    print(f"F1-score: {validation_metrics.box.f1:.4f}")
 
 
 if __name__ == "__main__":
