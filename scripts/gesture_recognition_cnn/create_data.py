@@ -31,7 +31,7 @@ else:
 for gesture in gestures:
     os.makedirs(os.path.join(dataset_path, gesture), exist_ok=True)
 
-sequence_length = 30
+sequence_length = 15
 # buffer = deque(maxlen=sequence_length)
 buffer = []
 

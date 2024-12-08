@@ -6,6 +6,7 @@ from ultralytics import YOLO
 import torch
 import logging
 import warnings
+from PIL import Image
 
 def setup_logging():
     """Configure logging for the script."""
@@ -33,7 +34,7 @@ def main():
         device = 'cpu'
         logger.warning("MPS device not available. Using CPU for inference.")
 
-    model_path = os.path.join(os.getcwd(), 'models', 'parameters', 'best.pt')
+    model_path = os.path.join(os.getcwd(), 'models', 'parameters', 'hand_tracking_model.pt')
     if not os.path.exists(model_path):
         logger.error(f"YOLO model file not found at {model_path}")
         raise FileNotFoundError(f"YOLO model file not found at {model_path}")
@@ -51,12 +52,12 @@ def main():
                 break
             frame = cv2.flip(frame, 1)
 
-            original_height, original_width = frame.shape[:2]
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(frame_rgb)
+
             with torch.no_grad():
-                results = model(frame_rgb, verbose=False)[0]
-            print(len(results.boxes))
-            top_k = 5
+                results = model(pil_image, verbose=False)[0]
+            top_k = 1
             if hasattr(results, 'boxes') and results.boxes:
                 
                 confs = results.boxes.conf  
@@ -64,11 +65,8 @@ def main():
                 num_boxes = len(confs)
                 k = min(top_k, num_boxes)
                 topk_conf, topk_indices = torch.topk(confs, k)
-
-                
                 top_boxes = results.boxes[topk_indices]
 
-                
                 for box in top_boxes:
                     bbox = box.xyxy.cpu().numpy()
                     if bbox.ndim == 2 and bbox.shape[0] == 1:
