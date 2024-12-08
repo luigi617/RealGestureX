@@ -40,7 +40,7 @@ def train_static_gesture_model():
     static_dir = os.getcwd() + '/datasets/gesture_dataset_cnn/static'
     
     num_epochs = 1000
-    batch_size = 16
+    batch_size = 32
     learning_rate = 1e-3
     num_classes = len(static)
     patience = 10

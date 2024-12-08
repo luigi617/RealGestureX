@@ -11,7 +11,7 @@ class DynamicGestureCNNModel(nn.Module):
         self.bidirectional = bidirectional
         self.num_directions = 2 if self.bidirectional else 1
         
-        resnet = models.resnet18(pretrained=True)
+        resnet = models.resnet34(pretrained=True)
         self.resnet = nn.Sequential(*list(resnet.children())[:-1])
         
         self.freeze_cnn = freeze_cnn
