@@ -65,9 +65,10 @@ def plot_confusion_matrix(y_true, y_pred, class_names):
     plt.title('Confusion Matrix (Normalized)')
     plt.xlabel('Predicted')
     plt.ylabel('True')
+    
+    # Save before showing
     plt.savefig('cm.jpg')
-    plt.show()
-
+    plt.show()  # Ensure this is called after saving
 
 def evaluate_and_get_predictions(model, data_loader, device):
     model.eval()
@@ -75,7 +76,7 @@ def evaluate_and_get_predictions(model, data_loader, device):
     y_pred = []
     
     with torch.no_grad():
-        for inputs, labels in data_loader:
+        for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             _, predicted = torch.max(outputs, 1)
@@ -83,56 +84,74 @@ def evaluate_and_get_predictions(model, data_loader, device):
             y_true.extend(labels.cpu().numpy())
             y_pred.extend(predicted.cpu().numpy())
     
+    print(f"Number of true labels: {len(y_true)}")
+    print(f"Number of predicted labels: {len(y_pred)}")
+    print(f"Sample true labels: {y_true[:10]}")
+    print(f"Sample predicted labels: {y_pred[:10]}")
+    
     return y_true, y_pred
 
 def train_dynamic_gesture_model():
-    dynamic_dir = os.path.join(os.getcwd(), 'datasets', 'gesture_dataset_cnn', 'dynamic')
-    
-    batch_size = 16
-    
-    num_classes = len(dynamic)
-    
-    train_data, val_data, test_data = split_dynamic_data(dynamic_dir, dynamic, ".jpg")
+    try:
+        dynamic_dir = os.path.join(os.getcwd(), 'datasets', 'gesture_dataset_cnn', 'dynamic')
+        
+        batch_size = 16
+        
+        num_classes = len(dynamic)
+        
+        train_data, val_data, test_data = split_dynamic_data(dynamic_dir, dynamic, ".jpg")
 
-    transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize((224, 224)), 
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    train_dataset = DynamicGestureDataset(train_data, transform=transform, sequence_length=15)
-    val_dataset = DynamicGestureDataset(val_data, transform=transform, sequence_length=15)
-    test_dataset = DynamicGestureDataset(test_data, transform=transform, sequence_length=15)
+        transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((224, 224)), 
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        
+        train_dataset = DynamicGestureDataset(train_data, transform=transform, sequence_length=15)
+        val_dataset = DynamicGestureDataset(val_data, transform=transform, sequence_length=15)
+        test_dataset = DynamicGestureDataset(test_data, transform=transform, sequence_length=15)
 
-    for dataset, name in zip([train_dataset, val_dataset, test_dataset], 
-                             ['train', 'val', 'test']):
-        if len(dataset) == 0:
-            raise ValueError(f"{name} dataset is empty. Check your data split.")
-    
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    model = DynamicGestureCNNModel(
-        num_classes=num_classes,
-        hidden_size=256,
-        num_layers=2,
-        bidirectional=True,
-        freeze_cnn=True
-    ).to(device)
+        for dataset, name in zip([train_dataset, val_dataset, test_dataset], 
+                                 ['train', 'val', 'test']):
+            if len(dataset) == 0:
+                raise ValueError(f"{name} dataset is empty. Check your data split.")
+            else:
+                print(f"{name} dataset size: {len(dataset)}")
+        
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+        
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {device}")
+        
+        model = DynamicGestureCNNModel(
+            num_classes=num_classes,
+            hidden_size=256,
+            num_layers=2,
+            bidirectional=True,
+            freeze_cnn=True
+        ).to(device)
 
+        # Load the best model and evaluate
+        model_path = 'models/parameters/dynamic_gesture_cnn_model.pth'
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found: {model_path}")
+        
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.to(device)
+        print("Model loaded successfully.")
+        
+        # Get predictions for the test data
+        y_true, y_pred = evaluate_and_get_predictions(model, test_loader, device)
+        
+        # Plot the confusion matrix
+        print("Plotting confusion matrix...")
+        plot_confusion_matrix(y_true, y_pred, class_names=dynamic)
     
-    # Load the best model and evaluate
-    model.load_state_dict(torch.load('models/parameters/dynamic_gesture_cnn_model.pth', map_location=torch.device(device)))
-    model.to(device)
-
-    # Get predictions for the test data
-    y_true, y_pred = evaluate_and_get_predictions(model, test_loader, device)
-
-    # Plot the confusion matrix
-    plot_confusion_matrix(y_true, y_pred, class_names=dynamic)
+    except Exception as e:
+        print(f"An error occurred during training/evaluation: {e}")
 
 if __name__ == "__main__":
     device = get_device()
     train_dynamic_gesture_model()
+
