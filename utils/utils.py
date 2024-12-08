@@ -49,6 +49,31 @@ def split_data(dir, classes, filetypes):
     
     return train_dir, val_dir, test_dir
 
+def split_dynamic_data(dynamic_dir, classes, extension=".jpg", train_ratio=0.8, val_ratio=0.1, test_ratio=0.1):
+
+    train_data = {cls: [] for cls in classes}
+    val_data = {cls: [] for cls in classes}
+    test_data = {cls: [] for cls in classes}
+    
+    for cls in classes:
+        cls_dir = os.path.join(dynamic_dir, cls)
+        samples = [
+            os.path.join(cls_dir, sample)
+            for sample in os.listdir(cls_dir)
+            if os.path.isdir(os.path.join(cls_dir, sample))
+        ]
+        random.shuffle(samples)
+        total = len(samples)
+        train_end = int(train_ratio * total)
+        val_end = train_end + int(val_ratio * total)
+        
+        train_data[cls].extend(samples[:train_end])
+        val_data[cls].extend(samples[train_end:val_end])
+        test_data[cls].extend(samples[val_end:])
+    
+    return train_data, val_data, test_data
+
+
 def evaluate(model, dataloader, device):
     model.eval()
     correct = 0
