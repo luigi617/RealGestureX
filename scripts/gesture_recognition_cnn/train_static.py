@@ -8,7 +8,7 @@ from tqdm import tqdm
 from torchvision import transforms
 
 from models.StaticGestureCNNModel import StaticGestureCNNModel
-from utils.utils import split_data, evaluate
+from utils.utils import get_device, split_data, evaluate
 from models.GestureClasses import static
 
 class StaticGestureDataset(Dataset):
@@ -46,7 +46,6 @@ def train_static_gesture_model():
     patience = 10
     
     train_data, val_data, test_data = split_data(static_dir, static, ".jpg")
-    
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((128, 128)), 
@@ -65,74 +64,74 @@ def train_static_gesture_model():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
-    best_val_acc = 0.0
-    epochs_without_improvement = 0
+    # best_val_acc = 0.0
+    # epochs_without_improvement = 0
 
-    for epoch in range(num_epochs):
-        model.train()
-        running_loss = 0.0
-        correct = 0
-        total = 0
+    # for epoch in range(num_epochs):
+    #     model.train()
+    #     running_loss = 0.0
+    #     correct = 0
+    #     total = 0
         
-        loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
-        for inputs, labels in loop:
-            inputs, labels = inputs.to(device), labels.to(device)
+    #     loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
+    #     for inputs, labels in loop:
+    #         inputs, labels = inputs.to(device), labels.to(device)
             
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+    #         outputs = model(inputs)
+    #         loss = criterion(outputs, labels)
             
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+    #         optimizer.zero_grad()
+    #         loss.backward()
+    #         optimizer.step()
             
-            running_loss += loss.item() * inputs.size(0)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+    #         running_loss += loss.item() * inputs.size(0)
+    #         _, predicted = torch.max(outputs.data, 1)
+    #         total += labels.size(0)
+    #         correct += (predicted == labels).sum().item()
             
-            loop.set_postfix(loss=loss.item(), accuracy=100 * correct / total)
+    #         loop.set_postfix(loss=loss.item(), accuracy=100 * correct / total)
         
-        epoch_loss = running_loss / len(train_dataset)
-        epoch_acc = 100 * correct / total
+    #     epoch_loss = running_loss / len(train_dataset)
+    #     epoch_acc = 100 * correct / total
         
-        model.eval()
-        val_loss = 0.0
-        val_correct = 0
-        val_total = 0
+    #     model.eval()
+    #     val_loss = 0.0
+    #     val_correct = 0
+    #     val_total = 0
         
-        with torch.no_grad():
-            for inputs, labels in val_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
+    #     with torch.no_grad():
+    #         for inputs, labels in val_loader:
+    #             inputs, labels = inputs.to(device), labels.to(device)
+    #             outputs = model(inputs)
+    #             loss = criterion(outputs, labels)
                 
-                val_loss += loss.item() * inputs.size(0)
-                _, predicted = torch.max(outputs.data, 1)
-                val_total += labels.size(0)
-                val_correct += (predicted == labels).sum().item()
+    #             val_loss += loss.item() * inputs.size(0)
+    #             _, predicted = torch.max(outputs.data, 1)
+    #             val_total += labels.size(0)
+    #             val_correct += (predicted == labels).sum().item()
         
-        val_epoch_loss = val_loss / len(val_dataset)
-        val_epoch_acc = 100 * val_correct / val_total
+    #     val_epoch_loss = val_loss / len(val_dataset)
+    #     val_epoch_acc = 100 * val_correct / val_total
         
-        print(f'Epoch [{epoch+1}/{num_epochs}] '
-              f'Train Loss: {epoch_loss:.4f} Train Acc: {epoch_acc:.2f}% '
-              f'Val Loss: {val_epoch_loss:.4f} Val Acc: {val_epoch_acc:.2f}%')
+    #     print(f'Epoch [{epoch+1}/{num_epochs}] '
+    #           f'Train Loss: {epoch_loss:.4f} Train Acc: {epoch_acc:.2f}% '
+    #           f'Val Loss: {val_epoch_loss:.4f} Val Acc: {val_epoch_acc:.2f}%')
         
-        # Early stopping check
-        if val_epoch_acc > best_val_acc:
-            best_val_acc = val_epoch_acc
-            epochs_without_improvement = 0
-            torch.save(model.state_dict(), 'models/parameters/static_gesture_cnn_model.pth')
-            print(f'Best model saved with Val Acc: {best_val_acc:.2f}%')
-        else:
-            epochs_without_improvement += 1
+    #     # Early stopping check
+    #     if val_epoch_acc > best_val_acc:
+    #         best_val_acc = val_epoch_acc
+    #         epochs_without_improvement = 0
+    #         torch.save(model.state_dict(), 'models/parameters/static_gesture_cnn_model.pth')
+    #         print(f'Best model saved with Val Acc: {best_val_acc:.2f}%')
+    #     else:
+    #         epochs_without_improvement += 1
         
-        # Check if early stopping should be triggered
-        if epochs_without_improvement >= patience:
-            print(f'Early stopping triggered after {patience} epochs with no improvement.')
-            break
+    #     # Check if early stopping should be triggered
+    #     if epochs_without_improvement >= patience:
+    #         print(f'Early stopping triggered after {patience} epochs with no improvement.')
+    #         break
     
-    model.load_state_dict(torch.load('models/parameters/static_gesture_cnn_model.pth'))
+    model.load_state_dict(torch.load('models/parameters/static_gesture_cnn_model.pth', map_location=torch.device(device)))
     model.to(device)
     train_acc = evaluate(model, train_loader, device)
     val_acc = evaluate(model, val_loader, device)
@@ -145,5 +144,5 @@ def train_static_gesture_model():
 
 
 if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     train_static_gesture_model()

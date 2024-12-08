@@ -5,7 +5,7 @@ import mediapipe as mp
 import torch
 from models.StaticGestureCNNModel import StaticGestureCNNModel
 from models.DynamicGestureCNNModel import DynamicGestureCNNModel
-from utils.utils import map_gesture_to_command
+from utils.utils import get_device, map_gesture_to_command
 import time
 from models.GestureClasses import static, dynamic
 from torchvision import transforms
@@ -29,12 +29,7 @@ def extract_hand_bbox(result, frame):
         return box
 
 def recognize_gestures():
-    if torch.cuda.is_available():
-        device = "cuda"
-    elif torch.backends.mps.is_available():
-        device = "mps"
-    else:
-        device = "cpu"
+    device = get_device()
 
     static_model = StaticGestureCNNModel(num_classes=len(static))
     static_model.load_state_dict(torch.load('models/parameters/static_gesture_cnn_model.pth', map_location=device))
@@ -47,7 +42,7 @@ def recognize_gestures():
     dynamic_model.to(device)
     dynamic_model.eval()
 
-    transform = transforms.Compose([
+    transformer = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((128, 128)), 
         transforms.ToTensor(),
@@ -88,26 +83,21 @@ def recognize_gestures():
         
         results = hands.process(frame_rgb)
 
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                mp.solutions.drawing_utils.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
         hand_data = extract_hand_bbox(results, frame_rgb)
         if hand_data:
             x_min, y_min, x_max, y_max = hand_data[0]
             cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
 
-            cropped_frame = frame[y_min:y_max, x_min:x_max].copy()
-            transformed_cropped_frame = transform(cropped_frame).unsqueeze(0).to(device)
+            cropped_frame = frame_rgb[y_min:y_max, x_min:x_max].copy()
+            transformed_cropped_frame = transformer(cropped_frame)
 
             dynamic_gesture = None
             dynamic_confidence_val = 0.0
             static_gesture = None
             static_confidence_val = 0.0
             with torch.no_grad():
-                static_output = static_model(transformed_cropped_frame)
-                static_probs = torch.softmax(static_output, dim=1)
-                static_confidence_val, static_pred = torch.max(static_probs, 1)
+                static_output = static_model(transformed_cropped_frame.unsqueeze(0).to(device))
+                static_confidence_val, static_pred = torch.max(static_output.data, 1)
                 static_gesture = static[static_pred.item()]
                 static_confidence_val = static_confidence_val.item()
             
@@ -133,7 +123,7 @@ def recognize_gestures():
             else:
                 gesture = static_gesture
                 confidence = static_confidence_val
-                last_static_gesture = (dynamic_gesture, dynamic_confidence_val)
+                last_static_gesture = (static_gesture, static_confidence_val)
 
             gesture = static_gesture
             confidence = static_confidence_val

@@ -73,7 +73,6 @@ def main(is_static=True):
 
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(frame_rgb)
-        fps = cap.get(cv2.CAP_PROP_FPS)
         
         curr_time = time.time()
         fps = 1 / (curr_time - prev_time) if (curr_time - prev_time) > 0 else 0

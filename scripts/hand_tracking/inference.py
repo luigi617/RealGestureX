@@ -8,6 +8,8 @@ import logging
 import warnings
 from PIL import Image
 
+from utils.utils import get_device
+
 def setup_logging():
     """Configure logging for the script."""
     logging.basicConfig(
@@ -24,15 +26,8 @@ def setup_logging():
 def main():
     setup_logging()
     logger = logging.getLogger(__name__)
-
-
     
-    if torch.backends.mps.is_available():
-        device = 'mps'
-        logger.info("Using MPS (Apple GPU) device for inference.")
-    else:
-        device = 'cpu'
-        logger.warning("MPS device not available. Using CPU for inference.")
+    device = get_device()
 
     model_path = os.path.join(os.getcwd(), 'models', 'parameters', 'hand_tracking_model.pt')
     if not os.path.exists(model_path):

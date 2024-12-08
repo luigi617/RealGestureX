@@ -37,6 +37,7 @@ class DynamicGestureDataset(Dataset):
         images = []
         for img_path in image_paths:
             image = cv2.imread(img_path)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             if image is None:
                 raise FileNotFoundError(f"Image not found: {img_path}")
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
