@@ -56,7 +56,7 @@ def train_dynamic_gesture_model():
     num_epochs = 1000
     batch_size = 16
     learning_rate = 1e-3
-    patience = 20
+    patience = 10
     
     num_classes = len(dynamic)
     

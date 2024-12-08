@@ -43,7 +43,7 @@ def train_static_gesture_model():
     batch_size = 16
     learning_rate = 1e-3
     num_classes = len(static)
-    patience = 20
+    patience = 10
     
     train_data, val_data, test_data = split_data(static_dir, static, ".jpg")
     
