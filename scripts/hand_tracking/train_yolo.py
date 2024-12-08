@@ -14,31 +14,18 @@ def main():
     # Training hyperparameters
     img_size = 640
     batch_size = 16
-    
-    best_mAP = 0
-    wait = 0
     patience = 10
     max_epochs = 1000
-
-    for epoch in range(max_epochs):
-        # Train for one epoch
-        model.train(data=dataset_yaml, epochs=1, imgsz=img_size, batch=batch_size)
-
-        # Validate model
-        val_metrics = model.val()
-        current_mAP = val_metrics.box.map
-
-        # Check for improvement
-        if current_mAP > best_mAP:
-            best_mAP = current_mAP
-            wait = 0
-            torch.save(model.model.state_dict(), model_save_path)
-        else:
-            wait += 1
-            if wait >= patience:
-                print("Early stopping triggered.")
-                break
-
+    model.train(
+        data=dataset_yaml,
+        epochs=max_epochs,
+        imgsz=img_size,
+        batch=batch_size,
+        patience=patience,
+        save=True,
+        save_period=-1
+    )
+    
     
     # Validate the model after training
     validation_metrics = model.val()
