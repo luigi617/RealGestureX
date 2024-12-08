@@ -8,7 +8,7 @@ from tqdm import tqdm
 from torchvision import transforms
 
 from models.DynamicGestureCNNModel import DynamicGestureCNNModel
-from utils.utils import split_dynamic_data, evaluate
+from utils.utils import get_device, split_dynamic_data, evaluate
 from models.GestureClasses import dynamic
 
 class DynamicGestureDataset(Dataset):
@@ -167,7 +167,7 @@ def train_dynamic_gesture_model():
             break
     
     # Load the best model and evaluate
-    model.load_state_dict(torch.load('models/parameters/dynamic_gesture_cnn_model.pth'))
+    model.load_state_dict(torch.load('models/parameters/dynamic_gesture_cnn_model.pth', map_location=torch.device(device)))
     model.to(device)
     train_acc = evaluate(model, train_loader, device)
     val_acc = evaluate(model, val_loader, device)
@@ -179,5 +179,5 @@ def train_dynamic_gesture_model():
     print(f"Test Accuracy: {test_acc:.2f}%")
 
 if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     train_dynamic_gesture_model()
