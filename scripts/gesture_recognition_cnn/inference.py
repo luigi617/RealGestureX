@@ -42,7 +42,7 @@ def recognize_gestures():
     static_model.eval()
 
     # Load Dynamic Gesture Model
-    dynamic_model = DynamicGestureCNNModel(num_classes=len(dynamic))
+    dynamic_model = DynamicGestureCNNModel(num_classes=len(dynamic), hidden_size=256, num_layers=2, bidirectional=True, freeze_cnn=True)
     dynamic_model.load_state_dict(torch.load('models/parameters/dynamic_gesture_cnn_model.pth', map_location=device))
     dynamic_model.to(device)
     dynamic_model.eval()
