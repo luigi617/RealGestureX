@@ -3,50 +3,57 @@
 import cv2
 import mediapipe as mp
 import torch
-from models.HandDetectionModel import get_finetuned_hand_detection_model, get_transformer
-from models.StaticGestureModel import StaticGestureModel
-from models.DynamicGestureModel import DynamicGestureModel
-from utils.utils import preprocess_landmarks
-from collections import deque
-import numpy as np
+from models.StaticGestureCNNModel import StaticGestureCNNModel
+from models.DynamicGestureCNNModel import DynamicGestureCNNModel
 from utils.utils import map_gesture_to_command
 import time
 from models.GestureClasses import static, dynamic
-from PIL import Image
+from torchvision import transforms
+from collections import deque
 
 
 
 def extract_hand_bbox(result, frame):
-
-    box = []
-
-    if result.multi_hand_landmarks:
-        for landmarks in result.multi_hand_landmarks:
-            # Calculate bounding box of the hand
-            x_min = min([landmark.x for landmark in landmarks.landmark])-0.03
-            y_min = min([landmark.y for landmark in landmarks.landmark])-0.03
-            x_max = max([landmark.x for landmark in landmarks.landmark])+0.03
-            y_max = max([landmark.y for landmark in landmarks.landmark])+0.03
-
-            # Convert normalized coordinates to pixel values
-            h, w, _ = frame.shape
-            x_min, y_min, x_max, y_max = int(x_min * w), int(y_min * h), int(x_max * w), int(y_max * h)
-
-            box.append([x_min, y_min, x_max, y_max])
-
-    return box
+        box = []
+        if result.multi_hand_landmarks:
+            for landmarks in result.multi_hand_landmarks:
+                # Calculate bounding box of the hand
+                x_min = min([landmark.x for landmark in landmarks.landmark])-0.03
+                y_min = min([landmark.y for landmark in landmarks.landmark])-0.03
+                x_max = max([landmark.x for landmark in landmarks.landmark])+0.03
+                y_max = max([landmark.y for landmark in landmarks.landmark])+0.03
+                # Convert normalized coordinates to pixel values
+                h, w, _ = frame.shape
+                x_min, y_min, x_max, y_max = int(x_min * w), int(y_min * h), int(x_max * w), int(y_max * h)
+                box.append([x_min, y_min, x_max, y_max])
+        return box
 
 def recognize_gestures():
-    # Device configuration
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
 
-    # Load Static Gesture Model
-    hand_detection_model = get_finetuned_hand_detection_model()
-    hand_detection_model.to(device)
-    hand_detection_model.eval()
+    static_model = StaticGestureCNNModel(num_classes=len(static))
+    static_model.load_state_dict(torch.load('models/parameters/static_gesture_cnn_model.pth', map_location=device))
+    static_model.to(device)
+    static_model.eval()
 
+    # Load Dynamic Gesture Model
+    dynamic_model = DynamicGestureCNNModel(num_classes=len(dynamic))
+    dynamic_model.load_state_dict(torch.load('models/parameters/dynamic_gesture_cnn_model.pth', map_location=device))
+    dynamic_model.to(device)
+    dynamic_model.eval()
 
-    # Initialize MediaPipe Hands
+    transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((128, 128)), 
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(
         static_image_mode=False,
@@ -56,44 +63,85 @@ def recognize_gestures():
     )
     mp_drawing = mp.solutions.drawing_utils
 
-
-    
-
-    # Start video capture
     cap = cv2.VideoCapture(2)
     prev_time = 0
+
+    sequence_length = 15  # Number of frames to consider for dynamic gestures
+    buffer = deque(maxlen=sequence_length)
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             print("Failed to grab frame")
             break
 
-        # Flip the frame horizontally for a mirror effect
         frame = cv2.flip(frame, 1)
-        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = hands.process(image)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-
-        sorted_indices = torch.argsort(output[0]["scores"], descending=True)
-        sorted_boxes = output[0]["boxes"][sorted_indices]
-        for box in sorted_boxes[:3]:
-            box = [int(x) for x in box.tolist()]
-            cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
-
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                mp.solutions.drawing_utils.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-
-              
-
-        # Display frame rate
         curr_time = time.time()
         fps = 1 / (curr_time - prev_time) if (curr_time - prev_time) > 0 else 0
         prev_time = curr_time
         cv2.putText(frame, f'FPS: {int(fps)}', (10, 70),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
+        results = hands.process(frame_rgb)
 
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                mp.solutions.drawing_utils.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+        hand_data = extract_hand_bbox(results, frame_rgb)
+        if hand_data:
+            x_min, y_min, x_max, y_max = hand_data[0]
+            cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+
+            cropped_frame = frame[y_min:y_max, x_min:x_max].copy()
+            transformed_cropped_frame = transform(cropped_frame).unsqueeze(0).to(device)
+
+            dynamic_gesture = None
+            dynamic_confidence_val = 0.0
+            static_gesture = None
+            static_confidence_val = 0.0
+            with torch.no_grad():
+                static_output = static_model(transformed_cropped_frame)
+                static_probs = torch.softmax(static_output, dim=1)
+                static_confidence_val, static_pred = torch.max(static_probs, 1)
+                static_gesture = static[static_pred.item()]
+                static_confidence_val = static_confidence_val.item()
+            
+            buffer.append(transformed_cropped_frame.squeeze(0))
+
+            if len(buffer) == sequence_length:
+                dynamic_sequence = torch.stack(list(buffer)).unsqueeze(0).to(device)
+
+                with torch.no_grad():
+                    dynamic_output = dynamic_model(dynamic_sequence)
+                    dynamic_probs = torch.softmax(dynamic_output, dim=1)
+                    dynamic_confidence_val, dynamic_pred = torch.max(dynamic_probs, 1)
+                    dynamic_gesture = dynamic[dynamic_pred.item()]
+                    dynamic_confidence_val = dynamic_confidence_val.item()
+
+            if dynamic_gesture and dynamic_gesture not in ["not_moving", "moving_slowly"]:
+                gesture = dynamic_gesture
+                confidence = dynamic_confidence_val
+                buffer.clear()
+            else:
+                gesture = static_gesture
+                confidence = static_confidence_val
+
+            gesture = static_gesture
+            confidence = static_confidence_val
+
+            if confidence > 0.6:
+                command = map_gesture_to_command(gesture)
+                cv2.putText(frame, f'Gesture: {gesture} ({confidence*100:.1f}%)', (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            else:
+                cv2.putText(frame, f'Gesture: None', (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
+
+            
         # Display the resulting frame
         cv2.imshow('Gesture Recognition', frame)
 

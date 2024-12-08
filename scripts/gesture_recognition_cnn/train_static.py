@@ -1,26 +1,18 @@
+import os
 import cv2
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-from models.StaticGestureCNNModel import StaticGestureCNNModel
-from useless.transformGesture import TransformGesture
-from utils.utils import preprocess_landmarks, split_data, evaluate
-import os
-import json
-import numpy as np
 from tqdm import tqdm
-import random
 from torchvision import transforms
-from models.GestureClasses import static, dynamic
+
+from models.StaticGestureCNNModel import StaticGestureCNNModel
+from utils.utils import split_data, evaluate
+from models.GestureClasses import static
 
 class StaticGestureDataset(Dataset):
     def __init__(self, data_dir:dict, transform=None):
-        """
-        Args:
-            data_dir (str): Path to the directory with gesture data.
-            transform (callable, optional): Optional transform to be applied on a sample.
-        """
         self.image_paths = []
         self.labels = []
         self.transform = transform
@@ -35,8 +27,8 @@ class StaticGestureDataset(Dataset):
         return len(self.image_paths)
     
     def __getitem__(self, idx):
-        image = cv2.imread(self.image_paths[idx])  # Read image
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert to RGB
+        image = cv2.imread(self.image_paths[idx])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         label = self.labels[idx]
         if self.transform:
             image = self.transform(image)
@@ -45,19 +37,16 @@ class StaticGestureDataset(Dataset):
         return image, label
 
 def train_static_gesture_model():
-    # Paths
     static_dir = os.getcwd() + '/datasets/gesture_dataset_cnn/static'
     
-    # Hyperparameters
     num_epochs = 1000
     batch_size = 16
     learning_rate = 1e-3
     num_classes = len(static)
-    patience = 20  # Early stopping patience
+    patience = 20
     
     train_data, val_data, test_data = split_data(static_dir, static, ".jpg")
     
-    # Datasets and Dataloaders
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((128, 128)), 
@@ -72,13 +61,12 @@ def train_static_gesture_model():
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
-    # Model, Loss, Optimizer
     model = StaticGestureCNNModel(num_classes=num_classes).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     best_val_acc = 0.0
-    epochs_without_improvement = 0  # Track number of epochs with no improvement
+    epochs_without_improvement = 0
 
     for epoch in range(num_epochs):
         model.train()
@@ -90,16 +78,13 @@ def train_static_gesture_model():
         for inputs, labels in loop:
             inputs, labels = inputs.to(device), labels.to(device)
             
-            # Forward
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             
-            # Backward and optimize
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             
-            # Statistics
             running_loss += loss.item() * inputs.size(0)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -110,7 +95,6 @@ def train_static_gesture_model():
         epoch_loss = running_loss / len(train_dataset)
         epoch_acc = 100 * correct / total
         
-        # Validation
         model.eval()
         val_loss = 0.0
         val_correct = 0
@@ -137,8 +121,7 @@ def train_static_gesture_model():
         # Early stopping check
         if val_epoch_acc > best_val_acc:
             best_val_acc = val_epoch_acc
-            epochs_without_improvement = 0  # Reset counter
-            # Save the best model
+            epochs_without_improvement = 0
             torch.save(model.state_dict(), 'models/parameters/static_gesture_cnn_model.pth')
             print(f'Best model saved with Val Acc: {best_val_acc:.2f}%')
         else:
@@ -149,15 +132,10 @@ def train_static_gesture_model():
             print(f'Early stopping triggered after {patience} epochs with no improvement.')
             break
     
-    # Load the best model and evaluate
     model.load_state_dict(torch.load('models/parameters/static_gesture_cnn_model.pth'))
     model.to(device)
     train_acc = evaluate(model, train_loader, device)
-    
-    # Evaluate on Validation Set
     val_acc = evaluate(model, val_loader, device)
-    
-    # Evaluate on Test Set
     test_acc = evaluate(model, test_loader, device)
 
     print("\nFinal Accuracies of the Best Model:")

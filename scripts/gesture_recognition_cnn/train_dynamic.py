@@ -1,38 +1,23 @@
+import os
 import cv2
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
+from torchvision import transforms
+
 from models.DynamicGestureCNNModel import DynamicGestureCNNModel
 from utils.utils import split_dynamic_data, evaluate
-import os
-import json
-import numpy as np
-from tqdm import tqdm
-import random
-from torchvision import transforms
 from models.GestureClasses import dynamic
-
-import cv2
-import torch
-from torch.utils.data import Dataset
-import os
-from torchvision import transforms
-import torch.nn as nn
 
 class DynamicGestureDataset(Dataset):
     def __init__(self, data_dir: dict, transform=None, sequence_length=15):
-        """
-        Args:
-            data_dir (dict): Dictionary with class names as keys and lists of sample directories as values.
-            transform (callable, optional): Optional transform to be applied on each image in the sequence.
-            sequence_length (int): Number of images per gesture sequence.
-        """
         self.sequence_length = sequence_length
         self.transform = transform
         self.classes = list(data_dir.keys())
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
-        self.samples = []  # List of tuples (list_of_image_paths, label)
+        self.samples = []
         
         for cls in self.classes:
             for sample_dir in data_dir[cls]:
@@ -60,40 +45,32 @@ class DynamicGestureDataset(Dataset):
             else:
                 image = torch.FloatTensor(image)
             images.append(image)
-        images = torch.stack(images)  # Shape: [sequence_length, C, H, W]
+        images = torch.stack(images)
         return images, label
 
 
 def train_dynamic_gesture_model():
-    # Paths
     dynamic_dir = os.path.join(os.getcwd(), 'datasets', 'gesture_dataset_cnn', 'dynamic')
     
-    # Hyperparameters
     num_epochs = 1000
-    batch_size = 8  # You might need to reduce this if GPU memory is limited
+    batch_size = 8
     learning_rate = 1e-3
-    patience = 20  # Early stopping patience
+    patience = 20
     
-    # Assuming 'dynamic' is a list of class names imported from models.GestureClasses
     num_classes = len(dynamic)
     
-    # Split data
     train_data, val_data, test_data = split_dynamic_data(dynamic_dir, dynamic, ".jpg")
-    # Transformations
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((128, 128)), 
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                             std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     
-    # Datasets and Dataloaders
     train_dataset = DynamicGestureDataset(train_data, transform=transform, sequence_length=15)
     val_dataset = DynamicGestureDataset(val_data, transform=transform, sequence_length=15)
     test_dataset = DynamicGestureDataset(test_data, transform=transform, sequence_length=15)
 
-    # Check for empty datasets
     for dataset, name in zip([train_dataset, val_dataset, test_dataset], 
                              ['train', 'val', 'test']):
         if len(dataset) == 0:
@@ -103,16 +80,14 @@ def train_dynamic_gesture_model():
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
     
-    # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # Model, Loss, Optimizer
     model = DynamicGestureCNNModel(
         num_classes=num_classes,
         hidden_size=64,
         num_layers=2,
         bidirectional=True,
-        freeze_cnn=True  # Set to False if you want to fine-tune the CNN
+        freeze_cnn=True
     ).to(device)
 
     criterion = nn.CrossEntropyLoss()
@@ -121,7 +96,7 @@ def train_dynamic_gesture_model():
     optimizer = optim.Adam(trainable_params, lr=learning_rate)
     
     best_val_acc = 0.0
-    epochs_without_improvement = 0  # Track number of epochs with no improvement
+    epochs_without_improvement = 0
     
     for epoch in range(num_epochs):
         model.train()
@@ -192,11 +167,7 @@ def train_dynamic_gesture_model():
     model.load_state_dict(torch.load('models/parameters/dynamic_gesture_cnn_model.pth'))
     model.to(device)
     train_acc = evaluate(model, train_loader, device)
-    
-    # Evaluate on Validation Set
     val_acc = evaluate(model, val_loader, device)
-    
-    # Evaluate on Test Set
     test_acc = evaluate(model, test_loader, device)
 
     print("\nFinal Accuracies of the Best Model:")

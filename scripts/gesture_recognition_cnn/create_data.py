@@ -1,5 +1,6 @@
 # hand_detection_with_mediapipe.py
 
+import time
 import cv2
 import mediapipe as mp
 import os
@@ -24,7 +25,7 @@ def main(is_static=True):
     sequence_length = 15
     buffer = []
 
-    def extract_hand_bbox(result):
+    def extract_hand_bbox(result, frame):
         box = []
         if result.multi_hand_landmarks:
             for landmarks in result.multi_hand_landmarks:
@@ -63,7 +64,7 @@ def main(is_static=True):
 
     cap = cv2.VideoCapture(2)
     current_gesture = None
-
+    prev_time = 0
     while cap.isOpened():
         ret, frame = cap.read()
         frame = cv2.flip(frame, 1)
@@ -73,10 +74,13 @@ def main(is_static=True):
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(frame_rgb)
         fps = cap.get(cv2.CAP_PROP_FPS)
+        
+        curr_time = time.time()
+        fps = 1 / (curr_time - prev_time) if (curr_time - prev_time) > 0 else 0
+        prev_time = curr_time
+        cv2.putText(frame, f'FPS: {int(fps)}', (10, 70),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
-        text = f"FPS: {fps:.2f}"
-
-        cv2.putText(frame, text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
         cv2.putText(frame,
                     "Press 'g' to choose a gesture, 'z' to clear buffer, 's' to save, 'q' to quit",
                     (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
@@ -85,7 +89,7 @@ def main(is_static=True):
             cv2.putText(frame, f"Current Gesture: {current_gesture}, buffer length: {len(buffer)}/{sequence_length}", (10, 90), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         
-        hand_data = extract_hand_bbox(results)
+        hand_data = extract_hand_bbox(results, frame_rgb)
         if hand_data:
             x_min, y_min, x_max, y_max = hand_data[0]
             cropped_frame = frame[y_min:y_max, x_min:x_max].copy()
