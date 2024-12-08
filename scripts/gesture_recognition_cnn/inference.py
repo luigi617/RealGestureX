@@ -16,7 +16,25 @@ from PIL import Image
 
 
 
+def extract_hand_bbox(result, frame):
 
+    box = []
+
+    if result.multi_hand_landmarks:
+        for landmarks in result.multi_hand_landmarks:
+            # Calculate bounding box of the hand
+            x_min = min([landmark.x for landmark in landmarks.landmark])-0.03
+            y_min = min([landmark.y for landmark in landmarks.landmark])-0.03
+            x_max = max([landmark.x for landmark in landmarks.landmark])+0.03
+            y_max = max([landmark.y for landmark in landmarks.landmark])+0.03
+
+            # Convert normalized coordinates to pixel values
+            h, w, _ = frame.shape
+            x_min, y_min, x_max, y_max = int(x_min * w), int(y_min * h), int(x_max * w), int(y_max * h)
+
+            box.append([x_min, y_min, x_max, y_max])
+
+    return box
 
 def recognize_gestures():
     # Device configuration
@@ -55,11 +73,6 @@ def recognize_gestures():
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(image)
 
-        pil_image = Image.fromarray(image)
-        transformer = get_transformer()
-        transformed_image = transformer(pil_image)
-        input_tensor = transformed_image.unsqueeze(0).to(device)
-        output = hand_detection_model(input_tensor)
 
         sorted_indices = torch.argsort(output[0]["scores"], descending=True)
         sorted_boxes = output[0]["boxes"][sorted_indices]

@@ -114,7 +114,7 @@ def train_dynamic_gesture_model():
         bidirectional=True,
         freeze_cnn=True  # Set to False if you want to fine-tune the CNN
     ).to(device)
-    
+
     criterion = nn.CrossEntropyLoss()
 
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
@@ -131,22 +131,15 @@ def train_dynamic_gesture_model():
         
         loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=False)
         for inputs, labels in loop:
-            # inputs shape: [batch_size, sequence_length, C, H, W]
-            # Depending on your model's expected input, you might need to reshape
-            # For example, flatten the sequence into the batch dimension
-            # Here, we'll assume the model can handle the 5D tensor
             inputs, labels = inputs.to(device), labels.to(device)
             
-            # Forward
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             
-            # Backward and optimize
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             
-            # Statistics
             running_loss += loss.item() * inputs.size(0)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -157,7 +150,6 @@ def train_dynamic_gesture_model():
         epoch_loss = running_loss / len(train_dataset)
         epoch_acc = 100 * correct / total
         
-        # Validation
         model.eval()
         val_loss = 0.0
         val_correct = 0
@@ -184,8 +176,7 @@ def train_dynamic_gesture_model():
         # Early stopping check
         if val_epoch_acc > best_val_acc:
             best_val_acc = val_epoch_acc
-            epochs_without_improvement = 0  # Reset counter
-            # Save the best model
+            epochs_without_improvement = 0 
             os.makedirs('models/parameters', exist_ok=True)
             torch.save(model.state_dict(), 'models/parameters/dynamic_gesture_cnn_model.pth')
             print(f'Best model saved with Val Acc: {best_val_acc:.2f}%')
