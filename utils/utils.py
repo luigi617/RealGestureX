@@ -29,7 +29,7 @@ def preprocess_landmarks(landmarks):
     return landmarks
 
 
-def split_data(dir, classes, filetypes):
+def split_data(dir, classes, filetypes, train_size=0.7, val_size=0.15, test_size=0.15):
     train_dir = {}
     val_dir = {}
     test_dir = {}
@@ -40,8 +40,8 @@ def split_data(dir, classes, filetypes):
         files = [os.path.join(cls_dir, f) for f in os.listdir(cls_dir) if f.endswith(filetype)]
         random.shuffle(files)
         n = len(files)
-        split_1 = int(0.8 * n)
-        split_2 = split_1 + int(0.1 * n)
+        split_1 = int(train_size * n)
+        split_2 = split_1 + int(val_size * n)
 
         train_dir[cls] = files[:split_1]
         val_dir[cls] = files[split_1:split_2]

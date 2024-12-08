@@ -97,7 +97,9 @@ def recognize_gestures():
             static_confidence_val = 0.0
             with torch.no_grad():
                 static_output = static_model(transformed_cropped_frame.unsqueeze(0).to(device))
-                static_confidence_val, static_pred = torch.max(static_output.data, 1)
+                # static_confidence_val, static_pred = torch.max(static_output.data, 1)
+                static_probs = torch.softmax(static_output, dim=1)
+                static_confidence_val, static_pred = torch.max(static_probs, 1)
                 static_gesture = static[static_pred.item()]
                 static_confidence_val = static_confidence_val.item()
             
