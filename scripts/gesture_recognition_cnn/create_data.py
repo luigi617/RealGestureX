@@ -127,5 +127,5 @@ def main(is_static=True):
 
 
 if __name__ == "__main__":
-    is_static = True
+    is_static = False
     main(is_static)
