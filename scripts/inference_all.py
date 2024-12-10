@@ -186,6 +186,7 @@ def main():
                         confidence = static_confidence_val
                         last_static_gesture = (static_gesture, static_confidence_val)
 
+
                     gesture = static_gesture
                     confidence = static_confidence_val
 
