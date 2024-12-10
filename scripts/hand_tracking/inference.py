@@ -36,7 +36,7 @@ def main():
 
     model = YOLO(model_path)
     model.to(device)
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(1)
 
 
     try:
